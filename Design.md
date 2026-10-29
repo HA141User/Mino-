@@ -1,5 +1,3 @@
-# Mino-
-
 Dokumen: Design Direction & UI/UX Guidelines
 Versi: 0.1
 Status: Konsep awal
@@ -428,7 +426,7 @@ Desain dapat dianggap siap untuk implementasi awal jika:
   Animasi                 Ringan, fungsional, dan tidak berlebihan
   Arsitektur katalog      Satu registry data game
   Prioritas awal          Homepage, katalog, lalu game pilot
-  Nama brand              littleplay. sebagai placeholder, belum final
+  Nama brand              Mino sebagai nama pilihan sementara; belum diverifikasi secara legal
 
 Prinsip penutup: bangun platform yang sederhana saat dilihat, mudah
 saat digunakan, dan kaya karakter ketika setiap game dimainkan.
@@ -436,3 +434,51 @@ saat digunakan, dan kaya karakter ketika setiap game dimainkan.
 Dokumen ini menjadi acuan awal untuk keputusan UI/UX, komponen frontend,
 dan pengembangan game berikutnya. Jika arah visual berubah, revisi
 dokumen ini terlebih dahulu agar implementasi tetap konsisten.
+14. Identitas Brand: Mino
+Nama brand
+Mino adalah nama pilihan untuk portal game ini. Nama ini singkat, ramah, mudah diucapkan, dan cukup fleksibel untuk menampung berbagai jenis game orisinal—mulai dari Snake dan Sudoku hingga permainan yang akan dikembangkan di masa depan.
+
+Status nama: pilihan konsep, belum final secara legal. Sebelum peluncuran, periksa ketersediaan domain, username media sosial, serta potensi konflik merek dagang di wilayah yang relevan.
+Arah logo
+Gaya yang dipilih: simbol geometris.
+
+Logo Mino sebaiknya memiliki simbol geometris orisinal yang sederhana, mudah dikenali, dan tetap terbaca pada ukuran kecil. Simbol dapat mengeksplorasi ide:
+- Grid atau susunan kotak yang terinspirasi dari permainan.
+- Satu titik atau bentuk kecil sebagai elemen kejutan.
+- Bentuk geometris yang menyiratkan gerakan, eksplorasi, atau interaksi.
+- Negative space yang membuat simbol terasa khas tanpa menjadi rumit.
+Hindari penggunaan ikon gamepad generik, joystick literal, atau simbol yang terlalu menyerupai satu game tertentu. Logo harus mewakili keseluruhan platform, bukan hanya Snake, Sudoku, atau Tic-Tac-Toe.
+Wordmark
+- Gunakan wordmark lowercase: mino.
+- Pilih sans-serif modern dengan bentuk huruf yang hangat dan mudah dibaca.
+- Jaga jarak huruf dan proporsi agar wordmark tetap jelas di navbar.
+- Simbol dan wordmark harus dapat digunakan bersama maupun terpisah.
+- Siapkan versi satu warna untuk penggunaan monokrom dan versi aksen untuk identitas utama.
+Palet logo
+Elemen	Warna	Nilai
+Latar utama	Warm paper	#F4F1E9
+Simbol/wordmark utama	Charcoal ink	#282923
+Aksen pilihan	Sage	#DCE5D0
+Aksen sekunder opsional	Clay	#EBD8CA
+
+
+Logo harus tetap berfungsi dalam satu warna. Warna aksen tidak boleh menjadi satu-satunya cara untuk membedakan bagian penting simbol.
+Varian logo yang perlu disiapkan
+1. Primary lockup: simbol geometris + wordmark mino.
+2. Symbol only: simbol untuk favicon, ikon situs, dan avatar.
+3. Monochrome: versi satu warna untuk konteks terbatas.
+4. Small-size version: bentuk yang disederhanakan agar tetap jelas pada ukuran 16–32 px.
+Aturan penggunaan
+- Jangan menambahkan gradasi, efek 3D, atau bayangan dekoratif.
+- Jangan membuat simbol terlalu detail.
+- Jangan mengubah proporsi simbol dan wordmark secara sembarangan.
+- Sisakan ruang kosong di sekitar logo.
+- Pastikan kontras memadai pada latar terang maupun gelap.
+- Uji logo pada navbar desktop, favicon, dan ukuran kecil sebelum menetapkan versi final.
+Status keputusan
+- Nama pilihan: Mino.
+- Gaya logo: simbol geometris.
+- Arah visual: Warm Minimalist Arcade.
+- Warna dasar: warm paper dan charcoal ink, dengan aksen sage.
+- Status aset logo: belum dibuat atau difinalisasi.
+Keputusan ini menjadi arah kerja untuk eksplorasi identitas visual berikutnya, bukan klaim bahwa logo final sudah tersedia.
