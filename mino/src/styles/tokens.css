@@ -1,0 +1,52 @@
+:root {
+  --color-paper: #f4f1e9;
+  --color-surface: #fbf9f4;
+  --color-ink: #282923;
+  --color-ink-soft: #3b3c35;
+  --color-muted: #6b6b62;
+  --color-border: #dad5c9;
+  --color-sage: #dce5d0;
+  --color-clay: #ebd8ca;
+  --color-blue-gray: #dde5e9;
+  --color-lilac: #e7dfef;
+
+  --color-paper-rgb: 244, 241, 233;
+  --color-ink-rgb: 40, 41, 35;
+
+  --content-width: 1200px;
+  --page-gutter: 32px;
+  --space-section: 56px;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-14: 3.5rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --border-width: 1px;
+
+  --transition-fast: 160ms;
+  --transition-normal: 220ms;
+
+  --font-sans:
+    'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:
+    'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --page-gutter: 20px;
+    --space-section: 40px;
+  }
+}

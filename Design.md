@@ -100,7 +100,7 @@ kontras serta pengujian visual.
   --color-paper       #F4F1E9   Latar utama
   --color-surface     #FBF9F4   Permukaan kartu atau input
   --color-ink         #282923   Teks utama
-  --color-muted       #77776E   Teks sekunder
+  --color-muted       #6B6B62   Teks sekunder
   --color-border      #DAD5C9   Garis pembatas
   --color-sage        #DCE5D0   Aksen ilustrasi arcade
   --color-clay        #EBD8CA   Aksen ilustrasi puzzle
@@ -165,8 +165,8 @@ Ketentuan:
 - Logo dan nama brand harus mudah dibaca.
 5.2 Hero
 Contoh copy sementara:
-Take a little break.
-Simple games, made with care. Ready when you are.
+Santai sejenak.
+Game sederhana, dibuat dengan hati-hati. Siap kapan pun.
 
 Hero harus memperkenalkan karakter platform dan mengarahkan pengguna ke
 permainan. Hindari paragraf panjang atau slogan yang terlalu abstrak.
