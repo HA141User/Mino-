@@ -1,4 +1,5 @@
-import type { Game } from '../data/games'
+import type { ComponentType } from 'react'
+import type { Game, GameArtKey } from '../data/games'
 
 function SnakeScene() {
   return (
@@ -119,7 +120,48 @@ function TicTacToeScene() {
   )
 }
 
+function FallbackScene() {
+  return (
+    <g>
+      <rect width="200" height="160" fill="var(--color-lilac)" />
+      <path
+        d="M40 0V160M80 0V160M120 0V160M160 0V160M0 40H200M0 80H200M0 120H200"
+        stroke="var(--color-ink)"
+        strokeOpacity="0.08"
+        strokeWidth="1"
+      />
+      <rect
+        x="78"
+        y="58"
+        width="44"
+        height="44"
+        rx="5"
+        fill="none"
+        stroke="var(--color-ink)"
+        strokeOpacity="0.5"
+        strokeWidth="2"
+      />
+      <circle
+        cx="100"
+        cy="80"
+        r="7"
+        fill="var(--color-sage)"
+        stroke="var(--color-ink)"
+        strokeWidth="2"
+      />
+    </g>
+  )
+}
+
+const scenes: Record<GameArtKey, ComponentType> = {
+  snake: SnakeScene,
+  sudoku: SudokuScene,
+  'tic-tac-toe': TicTacToeScene,
+}
+
 export function GameArt({ game }: { game: Game }) {
+  const Scene = scenes[game.thumbnail] ?? FallbackScene
+
   return (
     <svg
       className="game-art"
@@ -128,13 +170,7 @@ export function GameArt({ game }: { game: Game }) {
       role="presentation"
       aria-hidden="true"
     >
-      {game.thumbnail === 'snake' ? (
-        <SnakeScene />
-      ) : game.thumbnail === 'sudoku' ? (
-        <SudokuScene />
-      ) : (
-        <TicTacToeScene />
-      )}
+      <Scene />
     </svg>
   )
 }

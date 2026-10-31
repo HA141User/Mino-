@@ -2,6 +2,8 @@ export type GameCategory = 'arcade' | 'puzzle' | 'strategy'
 
 export type GameArtKey = 'snake' | 'sudoku' | 'tic-tac-toe'
 
+export type GameStatus = 'coming-soon' | 'playable'
+
 export type Game = {
   id: string
   slug: string
@@ -11,6 +13,7 @@ export type Game = {
   featured: boolean
   releaseDate: string
   thumbnail: GameArtKey
+  status: GameStatus
   path: string
 }
 
@@ -21,12 +24,12 @@ export const categoryMeta: {
 }[] = [
   {
     value: 'arcade',
-    label: 'Arcade',
+    label: 'Arkade',
     description: 'Game cepat dan fokus untuk jeda singkat.',
   },
   {
     value: 'puzzle',
-    label: 'Puzzle',
+    label: 'Teka-teki',
     description: 'Pelankan tempo, perhatikan baik-baik, lalu pecahkan.',
   },
   {
@@ -47,6 +50,7 @@ export const games: Game[] = [
     featured: true,
     releaseDate: '2026-11-01',
     thumbnail: 'snake',
+    status: 'coming-soon',
     path: '/games/snake',
   },
   {
@@ -59,6 +63,7 @@ export const games: Game[] = [
     featured: true,
     releaseDate: '2026-10-28',
     thumbnail: 'sudoku',
+    status: 'coming-soon',
     path: '/games/sudoku',
   },
   {
@@ -71,6 +76,7 @@ export const games: Game[] = [
     featured: false,
     releaseDate: '2026-10-20',
     thumbnail: 'tic-tac-toe',
+    status: 'coming-soon',
     path: '/games/tic-tac-toe',
   },
 ]
@@ -87,6 +93,10 @@ export function getCategoryDescription(category: GameCategory): string {
   return (
     categoryMeta.find((entry) => entry.value === category)?.description ?? ''
   )
+}
+
+export function getGameStatusLabel(status: GameStatus): string {
+  return status === 'playable' ? 'Main' : 'Segera'
 }
 
 export function getGameBySlug(slug: string | undefined): Game | undefined {

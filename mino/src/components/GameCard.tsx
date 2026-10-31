@@ -1,7 +1,7 @@
 import { ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { Game } from '../data/games'
-import { getCategoryLabel } from '../data/games'
+import { getCategoryLabel, getGameStatusLabel } from '../data/games'
 import { GameArt } from './GameArt'
 
 export function GameCard({ game }: { game: Game }) {
@@ -16,7 +16,7 @@ export function GameCard({ game }: { game: Game }) {
           <p className="game-card__meta">
             {getCategoryLabel(game.category)}
             <span aria-hidden="true"> · </span>
-            Segera
+            {getGameStatusLabel(game.status)}
           </p>
         </div>
         <span className="game-card__action" aria-hidden="true">

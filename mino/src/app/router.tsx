@@ -1,10 +1,10 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '../components/AppLayout'
 import { AboutPage } from '../pages/AboutPage'
-import { GamePage } from '../pages/GamePage'
 import { GamesPage } from '../pages/GamesPage'
 import { HomePage } from '../pages/HomePage'
 import { NotFoundPage } from '../pages/NotFoundPage'
+import { LazyGamePage } from './LazyGamePage'
 
 export const router = createBrowserRouter([
   {
@@ -32,7 +32,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'games/:slug',
-        element: <GamePage />,
+        element: <LazyGamePage />,
       },
       {
         path: 'about',

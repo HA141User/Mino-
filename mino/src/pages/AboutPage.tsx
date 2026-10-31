@@ -27,7 +27,7 @@ export function AboutPage() {
             <span>Antarmuka menyingkir agar game bisa memimpin.</span>
           </li>
           <li>
-            <strong>Satu brand, banyak kepribadian.</strong>
+            <strong>Satu merek, banyak kepribadian.</strong>
             <span>
               Setiap game membawa karakter Mino sambil tetap punya suara
               visualnya sendiri.

@@ -12,7 +12,7 @@ export function Footer() {
               Game sederhana, dibuat dengan hati-hati.
             </p>
           </div>
-          <nav aria-label="Navigasi footer">
+          <nav aria-label="Navigasi kaki halaman">
             <ul className="site-footer__nav">
               <li>
                 <Link to="/games">Game</Link>

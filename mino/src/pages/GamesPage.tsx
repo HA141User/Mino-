@@ -65,7 +65,11 @@ export function GamesPage({ category: routeCategory }: GamesPageProps) {
         <p className="page-head__description">{description}</p>
       </header>
 
-      <section className="catalog" aria-label="Katalog game">
+      <section className="catalog" aria-labelledby="games-list-title">
+        <h2 id="games-list-title" className="visually-hidden">
+          Daftar game
+        </h2>
+
         <div className="catalog__controls">
           <div className="catalog__search">
             <SearchBar value={search} onChange={setSearch} />

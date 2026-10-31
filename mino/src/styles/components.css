@@ -11,7 +11,7 @@
   top: 0;
   z-index: 50;
   background: var(--color-paper);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: var(--border-width) solid var(--color-border);
 }
 
 .navbar {
@@ -35,14 +35,7 @@
 }
 
 .brand__mark {
-  width: 26px;
-  height: 26px;
   flex: none;
-}
-
-.brand__dot {
-  fill: var(--color-sage);
-  stroke: currentColor;
 }
 
 .brand__word {
@@ -74,7 +67,7 @@
 
 .navbar__link.is-active {
   background: var(--color-surface);
-  box-shadow: inset 0 0 0 1px var(--color-border);
+  box-shadow: inset 0 0 0 var(--border-width) var(--color-border);
   color: var(--color-ink);
 }
 
@@ -97,7 +90,7 @@
   appearance: none;
   padding: 11px 14px 11px 42px;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-control);
   font-size: 0.9375rem;
   line-height: 1.4;
@@ -136,7 +129,7 @@
   gap: 6px;
   padding: 7px 12px;
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-control);
   color: var(--color-muted);
   font-size: 0.8125rem;
@@ -183,7 +176,7 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-card);
   transition:
     border-color var(--transition-normal) ease,
@@ -199,7 +192,7 @@
   aspect-ratio: 5 / 4;
   overflow: hidden;
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: var(--border-width) solid var(--color-border);
 }
 
 .game-art {
@@ -218,7 +211,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) 18px;
+  padding: var(--space-card);
 }
 
 .game-card__title {
@@ -244,7 +237,7 @@
   flex: none;
   margin-bottom: 1px;
   place-items: center;
-  border: 1px solid var(--color-border);
+  border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-control);
   color: var(--color-muted);
   transition:
@@ -266,7 +259,7 @@
   justify-content: space-between;
   gap: var(--space-4);
   padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: var(--border-width) solid var(--color-border);
 }
 
 .section-heading__title {
@@ -291,7 +284,7 @@
   gap: var(--space-3);
   padding: var(--space-10) var(--space-6);
   background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-  border: 1px dashed var(--color-border);
+  border: var(--border-width) dashed var(--color-border);
   border-radius: var(--radius-card);
 }
 
@@ -324,7 +317,7 @@
   gap: 8px;
   padding: 10px 16px;
   background: var(--color-ink);
-  border: 1px solid var(--color-ink);
+  border: var(--border-width) solid var(--color-ink);
   border-radius: var(--radius-control);
   color: var(--color-paper);
   font-size: 0.875rem;
@@ -359,7 +352,7 @@
 .site-footer {
   margin-top: var(--space-20);
   padding-block: var(--space-10) var(--space-6);
-  border-top: 1px solid var(--color-border);
+  border-top: var(--border-width) solid var(--color-border);
 }
 
 .site-footer__inner {
@@ -404,7 +397,7 @@
   gap: var(--space-4);
   margin-top: var(--space-8);
   padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
+  border-top: var(--border-width) solid var(--color-border);
   color: var(--color-muted);
   font-family: var(--font-mono);
   font-size: 0.6875rem;

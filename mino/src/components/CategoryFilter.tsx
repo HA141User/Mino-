@@ -27,7 +27,7 @@ export function CategoryFilter({
     <div
       className="filter"
       role="group"
-      aria-label="Filter game berdasarkan kategori"
+      aria-label="Saring game berdasarkan kategori"
     >
       {options.map((option) => (
         <button

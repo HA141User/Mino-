@@ -15,8 +15,8 @@ export function GamePlaceholder({ game }: { game: Game }) {
           yang bisa kamu harapkan saat game ini dibuka.
         </p>
         <ul className="game-stage__list">
-          <li>Kontrol keyboard dan sentuh</li>
-          <li>Skor, timer, dan mulai ulang cepat</li>
+          <li>Kontrol papan ketik dan sentuh</li>
+          <li>Skor, penghitung waktu, dan mulai ulang cepat</li>
           <li>Tanpa akun</li>
         </ul>
       </aside>
