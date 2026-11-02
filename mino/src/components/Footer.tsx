@@ -25,7 +25,6 @@ export function Footer() {
         </div>
         <div className="site-footer__bottom">
           <span>© {new Date().getFullYear()} Mino</span>
-          <span>Dibuat dengan React dan Vite</span>
         </div>
       </div>
     </footer>

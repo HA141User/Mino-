@@ -82,8 +82,8 @@ export function GamesPage({ category: routeCategory }: GamesPageProps) {
         </div>
 
         {isFiltered ? (
-          <p className="catalog__status">
-            {results.length} game ditemukan
+          <p className="catalog__status" aria-live="polite">
+            Menampilkan {results.length} dari {games.length} game.
           </p>
         ) : null}
 

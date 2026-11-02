@@ -429,6 +429,19 @@
     padding: 8px 10px;
   }
 
+  .filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 6px;
+    margin: -6px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filter__button {
+    flex: none;
+  }
+
   .game-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: var(--space-4);

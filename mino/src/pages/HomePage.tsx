@@ -18,6 +18,13 @@ export function HomePage() {
     isFiltered,
   } = useGameCatalog(games)
 
+  const playableCount = games.filter((game) => game.status === 'playable').length
+  const comingSoonCount = games.length - playableCount
+  const availability =
+    playableCount > 0
+      ? `${playableCount} game siap dimainkan`
+      : `${comingSoonCount} game sedang disiapkan`
+
   return (
     <>
       <section className="hero container">
@@ -26,8 +33,11 @@ export function HomePage() {
         <p className="hero__lede">
           Game sederhana, dibuat dengan hati-hati. Siap kapan pun.
         </p>
+        <div className="hero__search">
+          <SearchBar value={search} onChange={setSearch} />
+        </div>
         <p className="hero__footnote">
-          {games.length} game sedang disiapkan
+          {availability}
           <span aria-hidden="true">·</span>
           Tanpa akun
           <span aria-hidden="true">·</span>
@@ -35,27 +45,30 @@ export function HomePage() {
         </p>
       </section>
 
-      <section className="catalog container" aria-labelledby="catalog-title">
+      <section
+        id="katalog"
+        className="catalog container"
+        aria-labelledby="catalog-title"
+      >
         <SectionHeading
           id="catalog-title"
           title="Semua game"
-          description={
-            isFiltered
-              ? `Menampilkan ${results.length} dari ${games.length} game.`
-              : `${games.length} game, dan masih akan bertambah.`
-          }
+          description={`${games.length} game, dan masih akan bertambah.`}
         />
 
         <div className="catalog__controls">
-          <div className="catalog__search">
-            <SearchBar value={search} onChange={setSearch} />
-          </div>
           <CategoryFilter
             categories={categories}
             value={category}
             onChange={setCategory}
           />
         </div>
+
+        {isFiltered ? (
+          <p className="catalog__status" aria-live="polite">
+            Menampilkan {results.length} dari {games.length} game.
+          </p>
+        ) : null}
 
         {results.length > 0 ? (
           <GameGrid games={results} />
