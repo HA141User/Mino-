@@ -96,8 +96,17 @@
   font-size: 0.9375rem;
 }
 
-.snake-overlay .button {
+.snake-overlay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
   margin-top: var(--space-2);
+}
+
+.snake-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
 .snake-panel {
@@ -112,12 +121,23 @@
 }
 
 .snake-scores {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   width: 100%;
-  gap: var(--space-8);
+  gap: var(--space-4);
   margin: 0;
   padding-bottom: var(--space-4);
   border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.snake-scores--record {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.snake-scores--record .snake-scores__value {
+  font-size: 1.25rem;
 }
 
 .snake-scores > div {

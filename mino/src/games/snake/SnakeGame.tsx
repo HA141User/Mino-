@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef } from 'react'
 import type { CSSProperties, KeyboardEvent } from 'react'
+import { Link } from 'react-router-dom'
 import {
   BOARD_SIZE,
   TICK_MS,
@@ -15,6 +16,7 @@ import type { Direction, Point, SnakeState } from './engine'
 import './snake.css'
 
 const BEST_SCORE_KEY = 'mino:snake:best'
+const BEST_LENGTH_KEY = 'mino:snake:best-length'
 
 type Action =
   | { type: 'start' }
@@ -26,6 +28,8 @@ type Action =
 
 type GameState = SnakeState & {
   bestScore: number
+  bestLength: number
+  newLengthRecord: boolean
 }
 
 function applyAction(state: GameState, action: Action): SnakeState {
@@ -49,15 +53,27 @@ function applyAction(state: GameState, action: Action): SnakeState {
 
 function reducer(state: GameState, action: Action): GameState {
   const next = applyAction(state, action)
+  const isNewRun = action.type === 'start' || action.type === 'restart'
 
   return {
     ...next,
     bestScore: Math.max(state.bestScore, next.score),
+    bestLength: Math.max(state.bestLength, next.length),
+    newLengthRecord: isNewRun
+      ? false
+      : state.newLengthRecord || next.length > state.bestLength,
   }
 }
 
 function createGameState(): GameState {
-  return { ...createInitialState(), bestScore: readBestScore() }
+  const base = createInitialState()
+
+  return {
+    ...base,
+    bestScore: readBestScore(),
+    bestLength: Math.max(readBestLength(), base.length),
+    newLengthRecord: false,
+  }
 }
 
 const KEY_DIRECTIONS: Record<string, Direction> = {
@@ -86,6 +102,24 @@ function writeBestScore(score: number) {
     window.localStorage.setItem(BEST_SCORE_KEY, String(score))
   } catch {
     // Penyimpanan lokal bisa diblokir; skor tetap tampil selama sesi.
+  }
+}
+
+function readBestLength(): number {
+  try {
+    const stored = window.localStorage.getItem(BEST_LENGTH_KEY)
+    const value = stored ? Number.parseInt(stored, 10) : 0
+    return Number.isFinite(value) && value > 0 ? value : 0
+  } catch {
+    return 0
+  }
+}
+
+function writeBestLength(length: number) {
+  try {
+    window.localStorage.setItem(BEST_LENGTH_KEY, String(length))
+  } catch {
+    // Penyimpanan lokal bisa diblokir; rekor tetap tampil selama sesi.
   }
 }
 
@@ -127,6 +161,12 @@ export function SnakeGame() {
   }, [state.bestScore])
 
   useEffect(() => {
+    if (state.bestLength > 0) {
+      writeBestLength(state.bestLength)
+    }
+  }, [state.bestLength])
+
+  useEffect(() => {
     const handleVisibility = () => {
       if (document.hidden) {
         dispatch({ type: 'pause' })
@@ -151,7 +191,10 @@ export function SnakeGame() {
   }, [state.status])
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.target instanceof HTMLButtonElement) {
+    if (
+      event.target instanceof HTMLElement &&
+      event.target.closest('button, a')
+    ) {
       return
     }
 
@@ -194,9 +237,13 @@ export function SnakeGame() {
     dispatch({ type: state.status === 'idle' ? 'start' : 'restart' })
   }
 
+  const handlePanelPause = () => {
+    dispatch({ type: 'toggle-pause' })
+  }
+
   const announcement =
     state.status === 'game-over'
-      ? `Permainan selesai. Skor ${state.score}.`
+      ? `Permainan selesai. Skor ${state.score}. Makanan ${state.score}. Panjang ${state.length}. Rekor panjang ${state.bestLength}.`
       : state.status === 'paused'
         ? 'Permainan dijeda.'
         : state.status === 'running'
@@ -248,13 +295,15 @@ export function SnakeGame() {
                       Tekan Enter, Spasi, atau tombol di bawah. Arahkan dengan
                       panah atau WASD.
                     </p>
-                    <button
-                      type="button"
-                      className="button"
-                      onClick={() => dispatch({ type: 'start' })}
-                    >
-                      Mulai
-                    </button>
+                    <div className="snake-overlay__actions">
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => dispatch({ type: 'start' })}
+                      >
+                        Mulai
+                      </button>
+                    </div>
                   </>
                 ) : null}
 
@@ -267,13 +316,15 @@ export function SnakeGame() {
                     <p className="snake-overlay__text">
                       Tekan Spasi atau tombol di bawah untuk melanjutkan.
                     </p>
-                    <button
-                      type="button"
-                      className="button"
-                      onClick={() => dispatch({ type: 'start' })}
-                    >
-                      Lanjutkan
-                    </button>
+                    <div className="snake-overlay__actions">
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => dispatch({ type: 'start' })}
+                      >
+                        Lanjutkan
+                      </button>
+                    </div>
                   </>
                 ) : null}
 
@@ -284,16 +335,25 @@ export function SnakeGame() {
                       Skor {state.score}.
                     </h2>
                     <p className="snake-overlay__text">
-                      Tekan Enter untuk mencoba lagi dan lampaui rekor
-                      terbaikmu.
+                      {state.newLengthRecord
+                        ? `Rekor panjang baru: ${state.length} blok! `
+                        : ''}
+                      Makan {state.score} makanan dengan panjang {state.length}{' '}
+                      blok. Rekor panjang {state.bestLength} blok. Tekan Enter
+                      untuk mencoba lagi.
                     </p>
-                    <button
-                      type="button"
-                      className="button"
-                      onClick={() => dispatch({ type: 'restart' })}
-                    >
-                      Main lagi
-                    </button>
+                    <div className="snake-overlay__actions">
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => dispatch({ type: 'restart' })}
+                      >
+                        Main lagi
+                      </button>
+                      <Link to="/games" className="button button--quiet">
+                        Menu utama
+                      </Link>
+                    </div>
                   </>
                 ) : null}
               </div>
@@ -318,6 +378,23 @@ export function SnakeGame() {
               <dd className="snake-scores__value">
                 {formatScore(state.bestScore)}
               </dd>
+            </div>
+            <div>
+              <dt className="snake-scores__label">Makanan</dt>
+              <dd className="snake-scores__value">
+                {formatScore(state.score)}
+              </dd>
+            </div>
+          </dl>
+
+          <dl className="snake-scores snake-scores--record">
+            <div>
+              <dt className="snake-scores__label">Panjang</dt>
+              <dd className="snake-scores__value">{state.length}</dd>
+            </div>
+            <div>
+              <dt className="snake-scores__label">Rekor panjang</dt>
+              <dd className="snake-scores__value">{state.bestLength}</dd>
             </div>
           </dl>
 
@@ -354,13 +431,24 @@ export function SnakeGame() {
             badan sendiri mengakhiri permainan.
           </p>
 
-          <button
-            type="button"
-            className="button button--quiet"
-            onClick={handlePanelAction}
-          >
-            {state.status === 'idle' ? 'Mulai' : 'Mulai ulang'}
-          </button>
+          <div className="snake-actions">
+            {state.status === 'running' || state.status === 'paused' ? (
+              <button
+                type="button"
+                className="button button--quiet"
+                onClick={handlePanelPause}
+              >
+                {state.status === 'paused' ? 'Lanjutkan' : 'Jeda'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="button button--quiet"
+              onClick={handlePanelAction}
+            >
+              {state.status === 'idle' ? 'Mulai' : 'Mulai ulang'}
+            </button>
+          </div>
         </aside>
       </div>
     </div>

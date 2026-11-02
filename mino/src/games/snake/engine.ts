@@ -16,6 +16,7 @@ export type SnakeState = {
   direction: Direction
   queuedDirection: Direction
   score: number
+  length: number
   status: SnakeStatus
 }
 
@@ -71,6 +72,7 @@ export function createInitialState(): SnakeState {
     direction: 'right',
     queuedDirection: 'right',
     score: 0,
+    length: snake.length,
     status: 'idle',
   }
 }
@@ -154,6 +156,7 @@ export function step(state: SnakeState): SnakeState {
     direction: state.queuedDirection,
     queuedDirection: state.queuedDirection,
     score: willEat ? state.score + 1 : state.score,
+    length: snake.length,
     status: 'running',
   }
 }
