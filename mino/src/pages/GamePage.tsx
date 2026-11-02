@@ -1,8 +1,11 @@
+import { Suspense } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { GameGrid } from '../components/GameGrid'
+import { RouteFallback } from '../components/RouteFallback'
 import { SectionHeading } from '../components/SectionHeading'
 import { games, getCategoryLabel, getGameBySlug } from '../data/games'
 import { GamePlaceholder } from '../games/GamePlaceholder'
+import { gameRegistry } from '../games/registry'
 import { NotFoundPage } from './NotFoundPage'
 
 export function GamePage() {
@@ -13,6 +16,8 @@ export function GamePage() {
     return <NotFoundPage />
   }
 
+  const GameComponent =
+    gameRegistry[game.slug as keyof typeof gameRegistry]
   const related = games.filter((entry) => entry.slug !== game.slug).slice(0, 3)
 
   return (
@@ -29,7 +34,13 @@ export function GamePage() {
         <p className="game-header__description">{game.description}</p>
       </header>
 
-      <GamePlaceholder game={game} />
+      {GameComponent ? (
+        <Suspense fallback={<RouteFallback />}>
+          <GameComponent />
+        </Suspense>
+      ) : (
+        <GamePlaceholder game={game} />
+      )}
 
       {related.length > 0 ? (
         <section className="game-related" aria-labelledby="related-title">

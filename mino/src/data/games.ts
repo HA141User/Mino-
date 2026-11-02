@@ -50,7 +50,7 @@ export const games: Game[] = [
     featured: true,
     releaseDate: '2026-11-01',
     thumbnail: 'snake',
-    status: 'coming-soon',
+    status: 'playable',
     path: '/games/snake',
   },
   {
