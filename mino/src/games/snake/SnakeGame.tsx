@@ -3,20 +3,81 @@ import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BOARD_SIZE,
-  TICK_MS,
+  COUNTDOWN_STEP_MS,
+  DEFAULT_DIFFICULTY,
+  DIFFICULTIES,
+  SPEED_MAX_LEVEL,
+  SPEED_STEP_FOODS,
   createInitialState,
+  getDifficulty,
+  getSpeedLevel,
+  getTickMs,
+  isDifficulty,
   pauseGame,
   queueDirection,
   restartGame,
   startGame,
   step,
+  tickCountdown,
   togglePause,
 } from './engine'
-import type { Direction, Point, SnakeState } from './engine'
+import type { Difficulty, Direction, Point, SnakeState } from './engine'
 import './snake.css'
 
-const BEST_SCORE_KEY = 'mino:snake:best'
-const BEST_LENGTH_KEY = 'mino:snake:best-length'
+const DIFFICULTY_KEY = 'mino:snake:difficulty'
+const LEGACY_BEST_SCORE_KEY = 'mino:snake:best'
+const LEGACY_BEST_LENGTH_KEY = 'mino:snake:best-length'
+
+function bestScoreKey(difficulty: Difficulty): string {
+  return `mino:snake:${difficulty}:best`
+}
+
+function bestLengthKey(difficulty: Difficulty): string {
+  return `mino:snake:${difficulty}:best-length`
+}
+
+function readStoredNumber(key: string, fallbackKey?: string): number {
+  try {
+    const stored =
+      window.localStorage.getItem(key) ??
+      (fallbackKey ? window.localStorage.getItem(fallbackKey) : null)
+    const value = stored ? Number.parseInt(stored, 10) : 0
+    return Number.isFinite(value) && value > 0 ? value : 0
+  } catch {
+    return 0
+  }
+}
+
+function writeStoredNumber(key: string, value: number) {
+  try {
+    window.localStorage.setItem(key, String(value))
+  } catch {
+    // Penyimpanan lokal bisa diblokir; rekor tetap tampil selama sesi.
+  }
+}
+
+function readBestScore(difficulty: Difficulty): number {
+  return readStoredNumber(
+    bestScoreKey(difficulty),
+    difficulty === DEFAULT_DIFFICULTY ? LEGACY_BEST_SCORE_KEY : undefined,
+  )
+}
+
+function readBestLength(difficulty: Difficulty): number {
+  return readStoredNumber(
+    bestLengthKey(difficulty),
+    difficulty === DEFAULT_DIFFICULTY ? LEGACY_BEST_LENGTH_KEY : undefined,
+  )
+}
+
+function readDifficulty(): Difficulty {
+  try {
+    const stored = window.localStorage.getItem(DIFFICULTY_KEY)
+    return isDifficulty(stored) ? stored : DEFAULT_DIFFICULTY
+  } catch {
+    return DEFAULT_DIFFICULTY
+  }
+}
 
 type Action =
   | { type: 'start' }
@@ -24,9 +85,12 @@ type Action =
   | { type: 'pause' }
   | { type: 'toggle-pause' }
   | { type: 'direction'; direction: Direction }
+  | { type: 'countdown' }
   | { type: 'step' }
+  | { type: 'set-difficulty'; difficulty: Difficulty }
 
 type GameState = SnakeState & {
+  difficulty: Difficulty
   bestScore: number
   bestLength: number
   newLengthRecord: boolean
@@ -44,6 +108,8 @@ function applyAction(state: GameState, action: Action): SnakeState {
       return togglePause(state)
     case 'direction':
       return queueDirection(state, action.direction)
+    case 'countdown':
+      return tickCountdown(state)
     case 'step':
       return step(state)
     default:
@@ -51,12 +117,36 @@ function applyAction(state: GameState, action: Action): SnakeState {
   }
 }
 
+function withRecords(base: SnakeState, difficulty: Difficulty): GameState {
+  return {
+    ...base,
+    difficulty,
+    bestScore: readBestScore(difficulty),
+    bestLength: Math.max(readBestLength(difficulty), base.length),
+    newLengthRecord: false,
+  }
+}
+
 function reducer(state: GameState, action: Action): GameState {
+  if (action.type === 'set-difficulty') {
+    const locked =
+      state.status === 'running' ||
+      state.status === 'paused' ||
+      state.status === 'countdown'
+
+    if (action.difficulty === state.difficulty || locked) {
+      return state
+    }
+
+    return withRecords(createInitialState(), action.difficulty)
+  }
+
   const next = applyAction(state, action)
   const isNewRun = action.type === 'start' || action.type === 'restart'
 
   return {
     ...next,
+    difficulty: state.difficulty,
     bestScore: Math.max(state.bestScore, next.score),
     bestLength: Math.max(state.bestLength, next.length),
     newLengthRecord: isNewRun
@@ -66,14 +156,7 @@ function reducer(state: GameState, action: Action): GameState {
 }
 
 function createGameState(): GameState {
-  const base = createInitialState()
-
-  return {
-    ...base,
-    bestScore: readBestScore(),
-    bestLength: Math.max(readBestLength(), base.length),
-    newLengthRecord: false,
-  }
+  return withRecords(createInitialState(), readDifficulty())
 }
 
 const KEY_DIRECTIONS: Record<string, Direction> = {
@@ -85,42 +168,6 @@ const KEY_DIRECTIONS: Record<string, Direction> = {
   a: 'left',
   s: 'down',
   d: 'right',
-}
-
-function readBestScore(): number {
-  try {
-    const stored = window.localStorage.getItem(BEST_SCORE_KEY)
-    const value = stored ? Number.parseInt(stored, 10) : 0
-    return Number.isFinite(value) && value > 0 ? value : 0
-  } catch {
-    return 0
-  }
-}
-
-function writeBestScore(score: number) {
-  try {
-    window.localStorage.setItem(BEST_SCORE_KEY, String(score))
-  } catch {
-    // Penyimpanan lokal bisa diblokir; skor tetap tampil selama sesi.
-  }
-}
-
-function readBestLength(): number {
-  try {
-    const stored = window.localStorage.getItem(BEST_LENGTH_KEY)
-    const value = stored ? Number.parseInt(stored, 10) : 0
-    return Number.isFinite(value) && value > 0 ? value : 0
-  } catch {
-    return 0
-  }
-}
-
-function writeBestLength(length: number) {
-  try {
-    window.localStorage.setItem(BEST_LENGTH_KEY, String(length))
-  } catch {
-    // Penyimpanan lokal bisa diblokir; rekor tetap tampil selama sesi.
-  }
 }
 
 function formatScore(score: number): string {
@@ -145,26 +192,46 @@ export function SnakeGame() {
   const boardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (state.status === 'countdown') {
+      const timer = window.setInterval(
+        () => dispatch({ type: 'countdown' }),
+        COUNTDOWN_STEP_MS,
+      )
+
+      return () => window.clearInterval(timer)
+    }
+
     if (state.status !== 'running') {
       return
     }
 
-    const timer = window.setInterval(() => dispatch({ type: 'step' }), TICK_MS)
+    const timer = window.setInterval(
+      () => dispatch({ type: 'step' }),
+      getTickMs(state.difficulty, state.score),
+    )
 
     return () => window.clearInterval(timer)
-  }, [state.status])
+  }, [state.status, state.difficulty, state.score])
 
   useEffect(() => {
     if (state.bestScore > 0) {
-      writeBestScore(state.bestScore)
+      writeStoredNumber(bestScoreKey(state.difficulty), state.bestScore)
     }
-  }, [state.bestScore])
+  }, [state.bestScore, state.difficulty])
 
   useEffect(() => {
     if (state.bestLength > 0) {
-      writeBestLength(state.bestLength)
+      writeStoredNumber(bestLengthKey(state.difficulty), state.bestLength)
     }
-  }, [state.bestLength])
+  }, [state.bestLength, state.difficulty])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(DIFFICULTY_KEY, state.difficulty)
+    } catch {
+      // Pilihan mode tetap berlaku selama sesi.
+    }
+  }, [state.difficulty])
 
   useEffect(() => {
     const handleVisibility = () => {
@@ -280,14 +347,24 @@ export function SnakeGame() {
     dispatch({ type: 'toggle-pause' })
   }
 
+  const mode = getDifficulty(state.difficulty)
+  const speedLevel = getSpeedLevel(state.difficulty, state.score)
+  const canPause =
+    state.status === 'countdown' ||
+    state.status === 'running' ||
+    state.status === 'paused'
+  const modeLocked = canPause
+
   const announcement =
     state.status === 'game-over'
-      ? `Permainan selesai. Skor ${state.score}. Makanan ${state.score}. Panjang ${state.length}. Rekor panjang ${state.bestLength}.`
+      ? `Permainan selesai. Skor ${state.score}. Makanan ${state.score}. Panjang ${state.length}. Rekor panjang ${state.bestLength}. Mode ${mode.label}.`
       : state.status === 'paused'
         ? 'Permainan dijeda.'
-        : state.status === 'running'
-          ? `Skor ${state.score}.`
-          : 'Siap dimulai.'
+        : state.status === 'countdown'
+          ? `Bersiap. Mode ${mode.label}. Permainan segera dimulai.`
+          : state.status === 'running'
+            ? `Skor ${state.score}.`
+            : 'Siap dimulai.'
 
   return (
     <div className="snake-game">
@@ -324,6 +401,34 @@ export function SnakeGame() {
 
             {state.status !== 'running' ? (
               <div className="snake-overlay">
+                {state.status === 'countdown' ? (
+                  <>
+                    <p className="snake-overlay__eyebrow">
+                      Bersiap · {mode.label}
+                    </p>
+                    <p
+                      key={state.countdown}
+                      className="snake-countdown"
+                      aria-hidden="true"
+                    >
+                      {state.countdown}
+                    </p>
+                    <p className="snake-overlay__text">
+                      Ular mulai bergerak dalam {state.countdown} detik. Tekan
+                      panah atau WASD untuk memilih arah awal.
+                    </p>
+                    <div className="snake-overlay__actions">
+                      <button
+                        type="button"
+                        className="button button--quiet"
+                        onClick={handlePanelPause}
+                      >
+                        Jeda
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+
                 {state.status === 'idle' ? (
                   <>
                     <p className="snake-overlay__eyebrow">Siap?</p>
@@ -331,8 +436,8 @@ export function SnakeGame() {
                       Mulai dari satu blok.
                     </h2>
                     <p className="snake-overlay__text">
-                      Tekan Enter, Spasi, atau tombol di bawah. Arahkan dengan
-                      panah atau WASD.
+                      Mode {mode.label}. Tekan Enter, Spasi, atau tombol di
+                      bawah. Arahkan dengan panah atau WASD.
                     </p>
                     <div className="snake-overlay__actions">
                       <button
@@ -369,7 +474,9 @@ export function SnakeGame() {
 
                 {state.status === 'game-over' ? (
                   <>
-                    <p className="snake-overlay__eyebrow">Selesai</p>
+                    <p className="snake-overlay__eyebrow">
+                      Selesai · {mode.label}
+                    </p>
                     <h2 className="snake-overlay__title">
                       Skor {state.score}.
                     </h2>
@@ -405,6 +512,44 @@ export function SnakeGame() {
         </div>
 
         <aside className="snake-panel" aria-labelledby="snake-panel-title">
+          <div className="snake-modes">
+            <h2 id="snake-modes-title">Mode</h2>
+            <div
+              className="snake-modes__options"
+              role="group"
+              aria-labelledby="snake-modes-title"
+            >
+              {DIFFICULTIES.map((difficulty) => {
+                const active = difficulty.id === state.difficulty
+
+                return (
+                  <button
+                    key={difficulty.id}
+                    type="button"
+                    className={
+                      active ? 'snake-mode is-active' : 'snake-mode'
+                    }
+                    aria-pressed={active}
+                    disabled={modeLocked}
+                    onClick={() =>
+                      dispatch({
+                        type: 'set-difficulty',
+                        difficulty: difficulty.id,
+                      })
+                    }
+                  >
+                    {difficulty.label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="snake-modes__hint">
+              {modeLocked
+                ? 'Main ulang untuk mengganti mode.'
+                : mode.description}
+            </p>
+          </div>
+
           <dl className="snake-scores">
             <div>
               <dt className="snake-scores__label">Skor</dt>
@@ -436,6 +581,44 @@ export function SnakeGame() {
               <dd className="snake-scores__value">{state.bestLength}</dd>
             </div>
           </dl>
+
+          <p className="snake-scores__note">
+            Terbaik dan rekor panjang disimpan terpisah untuk mode{' '}
+            {mode.label.toLowerCase()}.
+          </p>
+
+          <div className="snake-speed">
+            <div className="snake-speed__header">
+              <span className="snake-scores__label">Kecepatan</span>
+              <span className="snake-speed__level">
+                Tingkat {speedLevel}/{SPEED_MAX_LEVEL}
+              </span>
+            </div>
+            <div
+              className="snake-speed__meter"
+              role="meter"
+              aria-label="Tingkat kecepatan"
+              aria-valuemin={1}
+              aria-valuemax={SPEED_MAX_LEVEL}
+              aria-valuenow={speedLevel}
+              aria-valuetext={`Tingkat ${speedLevel} dari ${SPEED_MAX_LEVEL}`}
+              style={{ '--speed-levels': SPEED_MAX_LEVEL } as CSSProperties}
+            >
+              {Array.from({ length: SPEED_MAX_LEVEL }, (_, index) => (
+                <span
+                  key={index}
+                  className={
+                    index < speedLevel
+                      ? 'snake-speed__cell is-on'
+                      : 'snake-speed__cell'
+                  }
+                />
+              ))}
+            </div>
+            <p className="snake-speed__hint">
+              Naik tiap {SPEED_STEP_FOODS} makanan.
+            </p>
+          </div>
 
           <h2 id="snake-panel-title">Cara main</h2>
           <ul className="snake-controls" id="snake-instructions">
@@ -471,7 +654,7 @@ export function SnakeGame() {
           </p>
 
           <div className="snake-actions">
-            {state.status === 'running' || state.status === 'paused' ? (
+            {canPause ? (
               <button
                 type="button"
                 className="button button--quiet"

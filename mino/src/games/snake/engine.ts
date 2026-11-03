@@ -1,5 +1,81 @@
 export const BOARD_SIZE = 20
-export const TICK_MS = 140
+
+export const COUNTDOWN_START = 3
+export const COUNTDOWN_STEP_MS = 700
+export const SPEED_STEP_FOODS = 5
+export const SPEED_MAX_LEVEL = 5
+
+export type Difficulty = 'santai' | 'normal' | 'cepat'
+
+export type DifficultyConfig = {
+  id: Difficulty
+  label: string
+  tickMs: number
+  stepMs: number
+  minTickMs: number
+  description: string
+}
+
+export const DIFFICULTIES: DifficultyConfig[] = [
+  {
+    id: 'santai',
+    label: 'Santai',
+    tickMs: 180,
+    stepMs: 6,
+    minTickMs: 100,
+    description: 'Langkah lebih lambat untuk pemanasan.',
+  },
+  {
+    id: 'normal',
+    label: 'Normal',
+    tickMs: 140,
+    stepMs: 6,
+    minTickMs: 80,
+    description: 'Ritme standar permainan.',
+  },
+  {
+    id: 'cepat',
+    label: 'Cepat',
+    tickMs: 100,
+    stepMs: 5,
+    minTickMs: 70,
+    description: 'Langkah cepat, ruang salah kecil.',
+  },
+]
+
+export const DEFAULT_DIFFICULTY: Difficulty = 'normal'
+
+export function getDifficulty(id: Difficulty): DifficultyConfig {
+  return (
+    DIFFICULTIES.find((difficulty) => difficulty.id === id) ?? DIFFICULTIES[1]
+  )
+}
+
+export function isDifficulty(value: unknown): value is Difficulty {
+  return DIFFICULTIES.some((difficulty) => difficulty.id === value)
+}
+
+export function getTickMs(difficulty: Difficulty, foods: number): number {
+  const config = getDifficulty(difficulty)
+  const levels = Math.floor(Math.max(foods, 0) / SPEED_STEP_FOODS)
+
+  return Math.max(config.minTickMs, config.tickMs - levels * config.stepMs)
+}
+
+export function getSpeedLevel(difficulty: Difficulty, foods: number): number {
+  const config = getDifficulty(difficulty)
+  const range = config.tickMs - config.minTickMs
+
+  if (range <= 0) {
+    return SPEED_MAX_LEVEL
+  }
+
+  const current = getTickMs(difficulty, foods)
+  const progress = (config.tickMs - current) / range
+  const level = 1 + Math.floor(progress * SPEED_MAX_LEVEL)
+
+  return Math.min(SPEED_MAX_LEVEL, Math.max(1, level))
+}
 
 export type Point = {
   x: number
@@ -8,7 +84,12 @@ export type Point = {
 
 export type Direction = 'up' | 'down' | 'left' | 'right'
 
-export type SnakeStatus = 'idle' | 'running' | 'paused' | 'game-over'
+export type SnakeStatus =
+  | 'idle'
+  | 'countdown'
+  | 'running'
+  | 'paused'
+  | 'game-over'
 
 export type SnakeState = {
   snake: Point[]
@@ -17,6 +98,7 @@ export type SnakeState = {
   queuedDirection: Direction
   score: number
   length: number
+  countdown: number
   status: SnakeStatus
 }
 
@@ -73,40 +155,63 @@ export function createInitialState(): SnakeState {
     queuedDirection: 'right',
     score: 0,
     length: snake.length,
+    countdown: COUNTDOWN_START,
     status: 'idle',
   }
 }
 
 export function startGame(state: SnakeState): SnakeState {
-  if (state.status === 'running') {
+  if (state.status === 'running' || state.status === 'countdown') {
     return state
   }
 
   if (state.status === 'paused') {
-    return { ...state, status: 'running' }
+    return {
+      ...state,
+      status: state.countdown > 0 ? 'countdown' : 'running',
+    }
   }
 
-  return { ...createInitialState(), status: 'running' }
+  return { ...createInitialState(), status: 'countdown' }
 }
 
 export function restartGame(): SnakeState {
-  return { ...createInitialState(), status: 'running' }
+  return { ...createInitialState(), status: 'countdown' }
 }
 
 export function pauseGame(state: SnakeState): SnakeState {
-  return state.status === 'running' ? { ...state, status: 'paused' } : state
+  return state.status === 'running' || state.status === 'countdown'
+    ? { ...state, status: 'paused' }
+    : state
 }
 
 export function togglePause(state: SnakeState): SnakeState {
-  if (state.status === 'running') {
+  if (state.status === 'running' || state.status === 'countdown') {
     return { ...state, status: 'paused' }
   }
 
   if (state.status === 'paused') {
-    return { ...state, status: 'running' }
+    return {
+      ...state,
+      status: state.countdown > 0 ? 'countdown' : 'running',
+    }
   }
 
   return state
+}
+
+export function tickCountdown(state: SnakeState): SnakeState {
+  if (state.status !== 'countdown' || state.countdown <= 0) {
+    return state
+  }
+
+  const countdown = state.countdown - 1
+
+  return {
+    ...state,
+    countdown,
+    status: countdown === 0 ? 'running' : 'countdown',
+  }
 }
 
 export function queueDirection(
@@ -157,6 +262,7 @@ export function step(state: SnakeState): SnakeState {
     queuedDirection: state.queuedDirection,
     score: willEat ? state.score + 1 : state.score,
     length: snake.length,
+    countdown: 0,
     status: 'running',
   }
 }

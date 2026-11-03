@@ -1,13 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import {
   BOARD_SIZE,
+  COUNTDOWN_START,
+  DIFFICULTIES,
   createInitialState,
+  getDifficulty,
+  getSpeedLevel,
+  getTickMs,
+  isDifficulty,
   pauseGame,
   queueDirection,
   restartGame,
   spawnFood,
   startGame,
   step,
+  tickCountdown,
   togglePause,
 } from './engine'
 import type { Point, SnakeState } from './engine'
@@ -23,6 +30,7 @@ function stateWith(
     queuedDirection: 'right',
     score: 0,
     length: snake.length,
+    countdown: 0,
     status: 'running',
     ...overrides,
   }
@@ -48,6 +56,7 @@ describe('createInitialState', () => {
     expect(state.snake).toHaveLength(3)
     expect(state.length).toBe(3)
     expect(state.score).toBe(0)
+    expect(state.countdown).toBe(COUNTDOWN_START)
     expect(isOnSnake(state.snake, state.food)).toBe(false)
   })
 
@@ -223,7 +232,7 @@ describe('step: makan dan tabrakan', () => {
     expect(next.length).toBe(4)
   })
 
-  it.each(['idle', 'paused', 'game-over'] as const)(
+  it.each(['idle', 'countdown', 'paused', 'game-over'] as const)(
     'mengabaikan langkah saat status %s',
     (status) => {
       const state = stateWith(
@@ -289,12 +298,20 @@ describe('queueDirection', () => {
 })
 
 describe('jeda', () => {
-  it('hanya menjeda permainan yang sedang berjalan', () => {
+  it('menjeda permainan yang sedang berjalan atau hitung mundur', () => {
     const running = stateWith([
       { x: 5, y: 5 },
       { x: 4, y: 5 },
       { x: 3, y: 5 },
     ])
+    const counting = stateWith(
+      [
+        { x: 5, y: 5 },
+        { x: 4, y: 5 },
+        { x: 3, y: 5 },
+      ],
+      { status: 'countdown', countdown: 2 },
+    )
     const paused = stateWith(
       [
         { x: 5, y: 5 },
@@ -313,6 +330,8 @@ describe('jeda', () => {
     )
 
     expect(pauseGame(running).status).toBe('paused')
+    expect(pauseGame(counting).status).toBe('paused')
+    expect(pauseGame(counting).countdown).toBe(2)
     expect(pauseGame(paused)).toBe(paused)
     expect(pauseGame(idle)).toBe(idle)
   })
@@ -333,6 +352,131 @@ describe('jeda', () => {
 
     expect(togglePause(idle)).toBe(idle)
     expect(togglePause(over)).toBe(over)
+  })
+
+  it('melanjutkan hitung mundur dari angka terakhir saat dijeda', () => {
+    const counting = stateWith(
+      [
+        { x: 5, y: 5 },
+        { x: 4, y: 5 },
+        { x: 3, y: 5 },
+      ],
+      { status: 'countdown', countdown: 2 },
+    )
+
+    const paused = togglePause(counting)
+    const resumed = togglePause(paused)
+
+    expect(paused.status).toBe('paused')
+    expect(resumed.status).toBe('countdown')
+    expect(resumed.countdown).toBe(2)
+  })
+})
+
+describe('hitung mundur', () => {
+  it('menghitung 3, 2, 1 lalu mulai berjalan', () => {
+    let state: SnakeState = {
+      ...stateWith([
+        { x: 5, y: 5 },
+        { x: 4, y: 5 },
+        { x: 3, y: 5 },
+      ]),
+      status: 'countdown',
+      countdown: COUNTDOWN_START,
+    }
+
+    for (let remaining = COUNTDOWN_START - 1; remaining > 0; remaining -= 1) {
+      state = tickCountdown(state)
+      expect(state.status).toBe('countdown')
+      expect(state.countdown).toBe(remaining)
+    }
+
+    state = tickCountdown(state)
+
+    expect(state.status).toBe('running')
+    expect(state.countdown).toBe(0)
+  })
+
+  it('mengabaikan hitung mundur saat status bukan countdown', () => {
+    const running = stateWith([
+      { x: 5, y: 5 },
+      { x: 4, y: 5 },
+      { x: 3, y: 5 },
+    ])
+
+    expect(tickCountdown(running)).toBe(running)
+  })
+})
+
+describe('mode kesulitan', () => {
+  it('menyediakan tiga mode dengan langkah makin cepat', () => {
+    expect(DIFFICULTIES.map((mode) => mode.id)).toEqual([
+      'santai',
+      'normal',
+      'cepat',
+    ])
+    expect(getDifficulty('santai').tickMs).toBeGreaterThan(
+      getDifficulty('normal').tickMs,
+    )
+    expect(getDifficulty('normal').tickMs).toBeGreaterThan(
+      getDifficulty('cepat').tickMs,
+    )
+  })
+
+  it('memvalidasi id mode dari penyimpanan', () => {
+    expect(isDifficulty('cepat')).toBe(true)
+    expect(isDifficulty('normal')).toBe(true)
+    expect(isDifficulty('kilat')).toBe(false)
+    expect(isDifficulty(null)).toBe(false)
+  })
+
+  it('jatuh ke mode normal untuk id yang tidak dikenal', () => {
+    expect(getDifficulty('kilat' as never).id).toBe('normal')
+  })
+})
+
+describe('akselerasi bertahap', () => {
+  it('mempercepat langkah setiap 5 makanan sesuai mode', () => {
+    expect(getTickMs('santai', 0)).toBe(180)
+    expect(getTickMs('santai', 5)).toBe(174)
+    expect(getTickMs('normal', 0)).toBe(140)
+    expect(getTickMs('normal', 5)).toBe(134)
+    expect(getTickMs('normal', 10)).toBe(128)
+    expect(getTickMs('cepat', 5)).toBe(95)
+  })
+
+  it('berhenti di batas bawah tiap mode', () => {
+    expect(getTickMs('santai', 500)).toBe(100)
+    expect(getTickMs('normal', 500)).toBe(80)
+    expect(getTickMs('cepat', 500)).toBe(70)
+  })
+
+  it('tidak pernah lebih lambat dari kecepatan awal dan tidak turun', () => {
+    for (const mode of DIFFICULTIES) {
+      let previous = mode.tickMs
+
+      for (let foods = 0; foods <= 200; foods += 5) {
+        const tick = getTickMs(mode.id, foods)
+
+        expect(tick).toBeLessThanOrEqual(previous)
+        expect(tick).toBeGreaterThanOrEqual(mode.minTickMs)
+        previous = tick
+      }
+    }
+  })
+
+  it('mengabaikan skor negatif dan mulai dari tingkat 1', () => {
+    expect(getTickMs('normal', -10)).toBe(140)
+    expect(getSpeedLevel('normal', -5)).toBe(1)
+    expect(getSpeedLevel('normal', 0)).toBe(1)
+  })
+
+  it('menaikkan tingkat kecepatan hingga maksimum 5', () => {
+    expect(getSpeedLevel('normal', 10)).toBe(2)
+    expect(getSpeedLevel('normal', 20)).toBe(3)
+    expect(getSpeedLevel('normal', 30)).toBe(4)
+    expect(getSpeedLevel('normal', 40)).toBe(5)
+    expect(getSpeedLevel('normal', 999)).toBe(5)
   })
 })
 
@@ -355,48 +499,53 @@ describe('start dan restart', () => {
     expect(resumed.score).toBe(4)
   })
 
-  it('membuat permainan baru saat start dari idle', () => {
+  it('membuat permainan baru dengan hitung mundur saat start dari idle', () => {
     const idle = createInitialState()
     const next = startGame(idle)
 
-    expect(next.status).toBe('running')
+    expect(next.status).toBe('countdown')
+    expect(next.countdown).toBe(COUNTDOWN_START)
     expect(next.score).toBe(0)
     expect(next.length).toBe(3)
     expect(next.snake).toHaveLength(3)
     expect(isOnSnake(next.snake, next.food)).toBe(false)
   })
 
-  it('membuat permainan baru saat start dari game over', () => {
+  it('membuat permainan baru dengan hitung mundur saat start dari game over', () => {
     const over = stateWith(
       [
         { x: 5, y: 5 },
         { x: 4, y: 5 },
         { x: 3, y: 5 },
       ],
-      { status: 'game-over', score: 12, length: 15 },
+      { status: 'game-over', score: 12, length: 15, countdown: 0 },
     )
 
     const next = startGame(over)
 
-    expect(next.status).toBe('running')
+    expect(next.status).toBe('countdown')
+    expect(next.countdown).toBe(COUNTDOWN_START)
     expect(next.score).toBe(0)
     expect(next.length).toBe(3)
   })
 
-  it('mengabaikan start saat permainan sudah berjalan', () => {
+  it('mengabaikan start saat permainan sudah berjalan atau hitung mundur', () => {
     const running = stateWith([
       { x: 5, y: 5 },
       { x: 4, y: 5 },
       { x: 3, y: 5 },
     ])
+    const counting = { ...running, status: 'countdown' as const, countdown: 2 }
 
     expect(startGame(running)).toBe(running)
+    expect(startGame(counting)).toBe(counting)
   })
 
-  it('restart selalu membuat permainan baru yang berjalan', () => {
+  it('restart selalu membuat permainan baru dengan hitung mundur', () => {
     const next = restartGame()
 
-    expect(next.status).toBe('running')
+    expect(next.status).toBe('countdown')
+    expect(next.countdown).toBe(COUNTDOWN_START)
     expect(next.score).toBe(0)
     expect(next.length).toBe(3)
     expect(next.direction).toBe('right')
