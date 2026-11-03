@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef } from 'react'
-import type { CSSProperties, KeyboardEvent } from 'react'
+import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BOARD_SIZE,
@@ -185,53 +185,92 @@ export function SnakeGame() {
   }, [])
 
   useEffect(() => {
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat) {
+        return
+      }
+
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return
+      }
+
+      if (event.target instanceof HTMLElement) {
+        if (
+          event.target.closest(
+            'input, textarea, select, [contenteditable="true"]',
+          )
+        ) {
+          return
+        }
+
+        const interactive = event.target.closest(
+          'a, button, [role="button"], summary',
+        )
+
+        if (interactive) {
+          if (!event.target.closest('.snake-game')) {
+            return
+          }
+
+          if (event.key === 'Enter' || event.key === ' ') {
+            return
+          }
+        }
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault()
+
+        if (state.status === 'paused') {
+          dispatch({ type: 'start' })
+        } else if (state.status !== 'running') {
+          dispatch({
+            type: state.status === 'game-over' ? 'restart' : 'start',
+          })
+        }
+
+        return
+      }
+
+      if (event.key === ' ' || event.key === 'Spacebar') {
+        event.preventDefault()
+
+        if (state.status === 'idle' || state.status === 'game-over') {
+          dispatch({
+            type: state.status === 'game-over' ? 'restart' : 'start',
+          })
+        } else {
+          dispatch({ type: 'toggle-pause' })
+        }
+
+        return
+      }
+
+      const direction = KEY_DIRECTIONS[event.key.toLowerCase()]
+
+      if (!direction) {
+        return
+      }
+
+      event.preventDefault()
+
+      if (state.status === 'idle') {
+        dispatch({ type: 'start' })
+      }
+
+      dispatch({ type: 'direction', direction })
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [state.status])
+
+  useEffect(() => {
     if (state.status === 'running') {
       boardRef.current?.focus({ preventScroll: true })
     }
   }, [state.status])
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (
-      event.target instanceof HTMLElement &&
-      event.target.closest('button, a')
-    ) {
-      return
-    }
-
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      if (state.status === 'paused') {
-        dispatch({ type: 'start' })
-      } else if (state.status !== 'running') {
-        dispatch({ type: state.status === 'game-over' ? 'restart' : 'start' })
-      }
-      return
-    }
-
-    if (event.key === ' ' || event.key === 'Spacebar') {
-      event.preventDefault()
-      if (state.status === 'idle' || state.status === 'game-over') {
-        dispatch({ type: state.status === 'game-over' ? 'restart' : 'start' })
-      } else {
-        dispatch({ type: 'toggle-pause' })
-      }
-      return
-    }
-
-    const direction = KEY_DIRECTIONS[event.key.toLowerCase()]
-
-    if (!direction) {
-      return
-    }
-
-    event.preventDefault()
-
-    if (state.status === 'idle') {
-      dispatch({ type: 'start' })
-    }
-
-    dispatch({ type: 'direction', direction })
-  }
 
   const handlePanelAction = () => {
     dispatch({ type: state.status === 'idle' ? 'start' : 'restart' })
@@ -251,7 +290,7 @@ export function SnakeGame() {
           : 'Siap dimulai.'
 
   return (
-    <div className="snake-game" onKeyDown={handleKeyDown}>
+    <div className="snake-game">
       <div className="snake-stage">
         <div className="snake-board-wrap">
           <div
