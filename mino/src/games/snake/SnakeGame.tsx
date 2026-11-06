@@ -357,7 +357,7 @@ export function SnakeGame() {
 
   const announcement =
     state.status === 'game-over'
-      ? `Permainan selesai. Skor ${state.score}. Makanan ${state.score}. Panjang ${state.length}. Rekor panjang ${state.bestLength}. Mode ${mode.label}.`
+      ? `Permainan selesai. Skor ${state.score}. Panjang ${state.length}. Rekor panjang ${state.bestLength}. Mode ${mode.label}.`
       : state.status === 'paused'
         ? 'Permainan dijeda.'
         : state.status === 'countdown'
@@ -484,9 +484,8 @@ export function SnakeGame() {
                       {state.newLengthRecord
                         ? `Rekor panjang baru: ${state.length} blok! `
                         : ''}
-                      Makan {state.score} makanan dengan panjang {state.length}{' '}
-                      blok. Rekor panjang {state.bestLength} blok. Tekan Enter
-                      untuk mencoba lagi.
+                      Panjang akhir {state.length} blok. Rekor panjang{' '}
+                      {state.bestLength} blok. Tekan Enter untuk mencoba lagi.
                     </p>
                     <div className="snake-overlay__actions">
                       <button
@@ -511,9 +510,19 @@ export function SnakeGame() {
           </p>
         </div>
 
-        <aside className="snake-panel" aria-labelledby="snake-panel-title">
+        <aside
+          className="snake-panel"
+          aria-label="Status dan kontrol permainan"
+        >
           <div className="snake-modes">
-            <h2 id="snake-modes-title">Mode</h2>
+            <div className="snake-modes__header">
+              <h2 id="snake-modes-title">Mode</h2>
+              <span className="snake-modes__hint">
+                {modeLocked
+                  ? 'Terkunci saat main'
+                  : mode.description}
+              </span>
+            </div>
             <div
               className="snake-modes__options"
               role="group"
@@ -543,49 +552,38 @@ export function SnakeGame() {
                 )
               })}
             </div>
-            <p className="snake-modes__hint">
-              {modeLocked
-                ? 'Main ulang untuk mengganti mode.'
-                : mode.description}
-            </p>
           </div>
 
-          <dl className="snake-scores">
-            <div>
-              <dt className="snake-scores__label">Skor</dt>
-              <dd className="snake-scores__value">
-                {formatScore(state.score)}
-              </dd>
-            </div>
-            <div>
-              <dt className="snake-scores__label">Terbaik</dt>
-              <dd className="snake-scores__value">
-                {formatScore(state.bestScore)}
-              </dd>
-            </div>
-            <div>
-              <dt className="snake-scores__label">Makanan</dt>
-              <dd className="snake-scores__value">
-                {formatScore(state.score)}
-              </dd>
-            </div>
-          </dl>
+          <div className="snake-scores-group">
+            <dl className="snake-scores">
+              <div>
+                <dt className="snake-scores__label">Skor</dt>
+                <dd className="snake-scores__value">
+                  {formatScore(state.score)}
+                </dd>
+              </div>
+              <div>
+                <dt className="snake-scores__label">Terbaik</dt>
+                <dd className="snake-scores__value">
+                  {formatScore(state.bestScore)}
+                </dd>
+              </div>
+            </dl>
 
-          <dl className="snake-scores snake-scores--record">
-            <div>
-              <dt className="snake-scores__label">Panjang</dt>
-              <dd className="snake-scores__value">{state.length}</dd>
+            <div className="snake-substats">
+              <div className="snake-substat">
+                <span className="snake-substat__label">Panjang</span>
+                <span className="snake-substat__value">{state.length}</span>
+              </div>
+              <span className="snake-substat__divider" aria-hidden="true">
+                ·
+              </span>
+              <div className="snake-substat">
+                <span className="snake-substat__label">Rekor</span>
+                <span className="snake-substat__value">{state.bestLength}</span>
+              </div>
             </div>
-            <div>
-              <dt className="snake-scores__label">Rekor panjang</dt>
-              <dd className="snake-scores__value">{state.bestLength}</dd>
-            </div>
-          </dl>
-
-          <p className="snake-scores__note">
-            Terbaik dan rekor panjang disimpan terpisah untuk mode{' '}
-            {mode.label.toLowerCase()}.
-          </p>
+          </div>
 
           <div className="snake-speed">
             <div className="snake-speed__header">
@@ -620,7 +618,40 @@ export function SnakeGame() {
             </p>
           </div>
 
-          <h2 id="snake-panel-title">Cara main</h2>
+          <div className="snake-actions">
+            {canPause ? (
+              <button
+                type="button"
+                className="button button--quiet"
+                onClick={handlePanelPause}
+              >
+                {state.status === 'paused' ? 'Lanjutkan' : 'Jeda'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={
+                state.status === 'idle'
+                  ? 'button'
+                  : 'button button--quiet'
+              }
+              onClick={handlePanelAction}
+            >
+              {state.status === 'idle' ? 'Mulai' : 'Mulai ulang'}
+            </button>
+          </div>
+        </aside>
+      </div>
+
+      <section className="snake-guide" aria-labelledby="snake-guide-title">
+        <div className="snake-guide__card">
+          <div className="snake-guide__header">
+            <h2 id="snake-guide-title" className="snake-guide__title">
+              Cara main
+            </h2>
+            <span className="snake-guide__badge">Kontrol keyboard</span>
+          </div>
+
           <ul className="snake-controls" id="snake-instructions">
             <li>
               <span className="snake-keys">
@@ -636,43 +667,36 @@ export function SnakeGame() {
                 <kbd>S</kbd>
                 <kbd>D</kbd>
               </span>
-              <span>untuk bergerak</span>
+              <span className="snake-controls__desc">untuk bergerak</span>
             </li>
             <li>
               <kbd>Spasi</kbd>
-              <span>jeda atau lanjut</span>
+              <span className="snake-controls__desc">jeda atau lanjut</span>
             </li>
             <li>
               <kbd>Enter</kbd>
-              <span>mulai atau ulang</span>
+              <span className="snake-controls__desc">mulai atau ulang</span>
             </li>
           </ul>
+        </div>
+
+        <div className="snake-guide__card">
+          <div className="snake-guide__header">
+            <h2 className="snake-guide__title">Mekanik papan</h2>
+            <span className="snake-guide__badge">Aturan permainan</span>
+          </div>
 
           <p className="snake-hint">
-            Papan tembus: keluar dari satu sisi, muncul di sisi lain. Menabrak
-            badan sendiri mengakhiri permainan.
+            <strong>Papan tembus:</strong> keluar dari satu sisi dinding, ular
+            akan muncul di sisi yang berlawanan. Permainan berakhir jika kepala
+            ular menabrak tubuh sendiri.
           </p>
-
-          <div className="snake-actions">
-            {canPause ? (
-              <button
-                type="button"
-                className="button button--quiet"
-                onClick={handlePanelPause}
-              >
-                {state.status === 'paused' ? 'Lanjutkan' : 'Jeda'}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="button button--quiet"
-              onClick={handlePanelAction}
-            >
-              {state.status === 'idle' ? 'Mulai' : 'Mulai ulang'}
-            </button>
-          </div>
-        </aside>
-      </div>
+          <p className="snake-hint snake-hint--subtle">
+            Rekor skor dan panjang disimpan otomatis di peramban untuk mode{' '}
+            {mode.label.toLowerCase()}.
+          </p>
+        </div>
+      </section>
     </div>
   )
 }
