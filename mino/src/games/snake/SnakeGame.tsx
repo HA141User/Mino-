@@ -1,6 +1,7 @@
-import { useEffect, useReducer, useRef } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
+import { Volume2, VolumeX } from 'lucide-react'
 import {
   BOARD_SIZE,
   COUNTDOWN_STEP_MS,
@@ -22,6 +23,16 @@ import {
   togglePause,
 } from './engine'
 import type { Difficulty, Direction, Point, SnakeState } from './engine'
+import {
+  playCountdownGoSound,
+  playCountdownTickSound,
+  playEatSound,
+  playGameOverSound,
+  playSpeedUpSound,
+  readStoredMute,
+  unlockAudio,
+  writeStoredMute,
+} from './sound'
 import './snake.css'
 
 const DIFFICULTY_KEY = 'mino:snake:difficulty'
@@ -189,7 +200,68 @@ const boardStyle = { '--board-size': BOARD_SIZE } as CSSProperties
 
 export function SnakeGame() {
   const [state, dispatch] = useReducer(reducer, undefined, createGameState)
+  const [muted, setMuted] = useState(readStoredMute)
   const boardRef = useRef<HTMLDivElement>(null)
+  const prevScoreRef = useRef(state.score)
+  const prevStatusRef = useRef(state.status)
+  const prevCountdownRef = useRef(state.countdown)
+
+  const toggleMute = () => {
+    unlockAudio()
+    setMuted((prev) => {
+      const next = !prev
+      writeStoredMute(next)
+      return next
+    })
+  }
+
+  useEffect(() => {
+    if (state.status === 'running' && state.score > prevScoreRef.current) {
+      if (!muted) {
+        const oldSpeed = getSpeedLevel(state.difficulty, prevScoreRef.current)
+        const newSpeed = getSpeedLevel(state.difficulty, state.score)
+        if (newSpeed > oldSpeed) {
+          playSpeedUpSound()
+        } else {
+          playEatSound()
+        }
+      }
+    }
+    prevScoreRef.current = state.score
+  }, [state.score, state.status, state.difficulty, muted])
+
+  useEffect(() => {
+    if (state.status === 'countdown') {
+      if (
+        state.countdown > 0 &&
+        state.countdown !== prevCountdownRef.current
+      ) {
+        if (!muted) {
+          playCountdownTickSound()
+        }
+      }
+    } else if (
+      prevStatusRef.current === 'countdown' &&
+      state.status === 'running'
+    ) {
+      if (!muted) {
+        playCountdownGoSound()
+      }
+    }
+    prevCountdownRef.current = state.countdown
+  }, [state.countdown, state.status, muted])
+
+  useEffect(() => {
+    if (
+      state.status === 'game-over' &&
+      prevStatusRef.current !== 'game-over'
+    ) {
+      if (!muted) {
+        playGameOverSound()
+      }
+    }
+    prevStatusRef.current = state.status
+  }, [state.status, muted])
 
   useEffect(() => {
     if (state.status === 'countdown') {
@@ -287,6 +359,7 @@ export function SnakeGame() {
 
       if (event.key === 'Enter') {
         event.preventDefault()
+        unlockAudio()
 
         if (state.status === 'paused') {
           dispatch({ type: 'start' })
@@ -301,6 +374,7 @@ export function SnakeGame() {
 
       if (event.key === ' ' || event.key === 'Spacebar') {
         event.preventDefault()
+        unlockAudio()
 
         if (state.status === 'idle' || state.status === 'game-over') {
           dispatch({
@@ -320,8 +394,12 @@ export function SnakeGame() {
       }
 
       event.preventDefault()
+      unlockAudio()
 
       if (state.status === 'idle') {
+        if (direction === 'left') {
+          return
+        }
         dispatch({ type: 'start' })
       }
 
@@ -340,10 +418,12 @@ export function SnakeGame() {
   }, [state.status])
 
   const handlePanelAction = () => {
+    unlockAudio()
     dispatch({ type: state.status === 'idle' ? 'start' : 'restart' })
   }
 
   const handlePanelPause = () => {
+    unlockAudio()
     dispatch({ type: 'toggle-pause' })
   }
 
@@ -516,12 +596,32 @@ export function SnakeGame() {
         >
           <div className="snake-modes">
             <div className="snake-modes__header">
-              <h2 id="snake-modes-title">Mode</h2>
-              <span className="snake-modes__hint">
-                {modeLocked
-                  ? 'Terkunci saat main'
-                  : mode.description}
-              </span>
+              <div className="snake-modes__title-wrap">
+                <h2 id="snake-modes-title">Mode</h2>
+                <span className="snake-modes__hint">
+                  {modeLocked
+                    ? 'Terkunci saat main'
+                    : mode.description}
+                </span>
+              </div>
+              <button
+                type="button"
+                className={
+                  muted
+                    ? 'snake-sound-toggle is-muted'
+                    : 'snake-sound-toggle'
+                }
+                aria-label={muted ? 'Aktifkan suara' : 'Bisukan suara'}
+                title={muted ? 'Aktifkan suara' : 'Bisukan suara'}
+                onClick={toggleMute}
+              >
+                {muted ? (
+                  <VolumeX size={14} aria-hidden="true" />
+                ) : (
+                  <Volume2 size={14} aria-hidden="true" />
+                )}
+                <span>{muted ? 'Bisu' : 'Suara'}</span>
+              </button>
             </div>
             <div
               className="snake-modes__options"

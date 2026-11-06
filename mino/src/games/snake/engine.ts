@@ -4,6 +4,7 @@ export const COUNTDOWN_START = 3
 export const COUNTDOWN_STEP_MS = 700
 export const SPEED_STEP_FOODS = 5
 export const SPEED_MAX_LEVEL = 5
+export const INPUT_BUFFER_LIMIT = 2
 
 export type Difficulty = 'santai' | 'normal' | 'cepat'
 
@@ -96,6 +97,7 @@ export type SnakeState = {
   food: Point
   direction: Direction
   queuedDirection: Direction
+  directionQueue: Direction[]
   score: number
   length: number
   countdown: number
@@ -153,6 +155,7 @@ export function createInitialState(): SnakeState {
     food: spawnFood(snake),
     direction: 'right',
     queuedDirection: 'right',
+    directionQueue: [],
     score: 0,
     length: snake.length,
     countdown: COUNTDOWN_START,
@@ -222,11 +225,60 @@ export function queueDirection(
     return state
   }
 
-  if (OPPOSITE[state.direction] === direction) {
+  // Saat idle atau countdown: ular belum bergerak, pemain mengatur arah awal
+  if (state.status === 'idle' || state.status === 'countdown') {
+    if (OPPOSITE[state.direction] === direction) {
+      return state
+    }
+
+    return {
+      ...state,
+      directionQueue: [direction],
+      queuedDirection: direction,
+    }
+  }
+
+  // Saat running atau paused: gunakan buffer antrean hingga 2 giliran
+  const queue =
+    state.directionQueue && state.directionQueue.length > 0
+      ? state.directionQueue
+      : state.queuedDirection !== state.direction
+        ? [state.queuedDirection]
+        : []
+
+  if (queue.length >= INPUT_BUFFER_LIMIT) {
+    const firstDirection = queue[0]
+    // Jika input baru valid terhadap giliran pertama (tegak lurus terhadap giliran pertama),
+    // izinkan menggantikan giliran kedua.
+    if (
+      direction === firstDirection ||
+      OPPOSITE[firstDirection] === direction ||
+      direction === queue[1]
+    ) {
+      return state
+    }
+
+    const nextQueue = [firstDirection, direction]
+    return {
+      ...state,
+      directionQueue: nextQueue,
+      queuedDirection: nextQueue[0],
+    }
+  }
+
+  const lastDirection =
+    queue.length > 0 ? queue[queue.length - 1] : state.direction
+
+  if (direction === lastDirection || OPPOSITE[lastDirection] === direction) {
     return state
   }
 
-  return { ...state, queuedDirection: direction }
+  const nextQueue = [...queue, direction]
+  return {
+    ...state,
+    directionQueue: nextQueue,
+    queuedDirection: nextQueue[0],
+  }
 }
 
 export function step(state: SnakeState): SnakeState {
@@ -234,7 +286,13 @@ export function step(state: SnakeState): SnakeState {
     return state
   }
 
-  const vector = DIRECTION_VECTORS[state.queuedDirection]
+  const queue =
+    state.directionQueue && state.directionQueue.length > 0
+      ? state.directionQueue
+      : [state.queuedDirection]
+
+  const nextDirection = queue[0]
+  const vector = DIRECTION_VECTORS[nextDirection]
   const head = state.snake[0]
   const nextHead: Point = {
     x: (head.x + vector.x + BOARD_SIZE) % BOARD_SIZE,
@@ -247,8 +305,17 @@ export function step(state: SnakeState): SnakeState {
     (segment) => segment.x === nextHead.x && segment.y === nextHead.y,
   )
 
+  const remainingQueue = queue.slice(1)
+  const nextQueuedDirection = remainingQueue[0] ?? nextDirection
+
   if (hitsSelf) {
-    return { ...state, direction: state.queuedDirection, status: 'game-over' }
+    return {
+      ...state,
+      direction: nextDirection,
+      queuedDirection: nextQueuedDirection,
+      directionQueue: remainingQueue,
+      status: 'game-over',
+    }
   }
 
   const snake = willEat
@@ -258,8 +325,9 @@ export function step(state: SnakeState): SnakeState {
   return {
     snake,
     food: willEat ? spawnFood(snake) : state.food,
-    direction: state.queuedDirection,
-    queuedDirection: state.queuedDirection,
+    direction: nextDirection,
+    queuedDirection: nextQueuedDirection,
+    directionQueue: remainingQueue,
     score: willEat ? state.score + 1 : state.score,
     length: snake.length,
     countdown: 0,

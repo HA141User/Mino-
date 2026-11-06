@@ -28,6 +28,7 @@ function stateWith(
     food: { x: 19, y: 19 },
     direction: 'right',
     queuedDirection: 'right',
+    directionQueue: [],
     score: 0,
     length: snake.length,
     countdown: 0,
@@ -294,6 +295,91 @@ describe('queueDirection', () => {
     )
 
     expect(queueDirection(state, 'up')).toBe(state)
+  })
+
+  it('menampung dua belokan berturut-turut dalam antrean input buffer 2 langkah', () => {
+    const state = stateWith([
+      { x: 5, y: 5 },
+      { x: 4, y: 5 },
+      { x: 3, y: 5 },
+    ])
+
+    const withFirst = queueDirection(state, 'up')
+    const withSecond = queueDirection(withFirst, 'left')
+
+    expect(withSecond.directionQueue).toEqual(['up', 'left'])
+    expect(withSecond.queuedDirection).toBe('up')
+
+    const step1 = step(withSecond)
+    expect(step1.direction).toBe('up')
+    expect(step1.directionQueue).toEqual(['left'])
+    expect(step1.queuedDirection).toBe('left')
+    expect(head(step1)).toEqual({ x: 5, y: 4 })
+
+    const step2 = step(step1)
+    expect(step2.direction).toBe('left')
+    expect(step2.directionQueue).toEqual([])
+    expect(step2.queuedDirection).toBe('left')
+    expect(head(step2)).toEqual({ x: 4, y: 4 })
+  })
+
+  it('menolak arah yang berlawanan dengan belokan terakhir di antrean', () => {
+    const state = stateWith([
+      { x: 5, y: 5 },
+      { x: 4, y: 5 },
+      { x: 3, y: 5 },
+    ])
+
+    const withFirst = queueDirection(state, 'up')
+    const blocked = queueDirection(withFirst, 'down')
+
+    expect(blocked.directionQueue).toEqual(['up'])
+  })
+
+  it('menggantikan belokan kedua jika giliran ketiga valid terhadap giliran pertama', () => {
+    const state = stateWith([
+      { x: 5, y: 5 },
+      { x: 4, y: 5 },
+      { x: 3, y: 5 },
+    ])
+
+    const q1 = queueDirection(state, 'up')
+    const q2 = queueDirection(q1, 'left')
+    const q3 = queueDirection(q2, 'right')
+
+    expect(q3.directionQueue).toEqual(['up', 'right'])
+  })
+
+  it('mengabaikan input yang identik dengan giliran terakhir', () => {
+    const state = stateWith([
+      { x: 5, y: 5 },
+      { x: 4, y: 5 },
+      { x: 3, y: 5 },
+    ])
+
+    const q1 = queueDirection(state, 'up')
+    const q2 = queueDirection(q1, 'up')
+
+    expect(q2.directionQueue).toEqual(['up'])
+  })
+
+  it('memungkinkan pemilihan arah awal saat hitung mundur dan menolak arah leher', () => {
+    const counting = stateWith(
+      [
+        { x: 8, y: 10 },
+        { x: 7, y: 10 },
+        { x: 6, y: 10 },
+      ],
+      { status: 'countdown', countdown: 3 },
+    )
+
+    const changed = queueDirection(counting, 'down')
+    expect(changed.queuedDirection).toBe('down')
+    expect(changed.directionQueue).toEqual(['down'])
+
+    const invalid = queueDirection(counting, 'left')
+    expect(invalid.queuedDirection).toBe('right')
+    expect(invalid.directionQueue).toEqual([])
   })
 })
 
