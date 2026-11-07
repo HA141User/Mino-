@@ -1,7 +1,14 @@
-import { useEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { Volume2, VolumeX } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Volume2,
+  VolumeX,
+} from 'lucide-react'
 import {
   BOARD_SIZE,
   BONUS_FOOD_POINTS,
@@ -48,6 +55,34 @@ function bestScoreKey(difficulty: Difficulty): string {
 
 function bestLengthKey(difficulty: Difficulty): string {
   return `mino:snake:${difficulty}:best-length`
+}
+
+function triggerHaptic(type: 'tap' | 'eat' | 'bonus' | 'game-over') {
+  if (
+    typeof window === 'undefined' ||
+    typeof navigator === 'undefined' ||
+    !navigator.vibrate
+  ) {
+    return
+  }
+  try {
+    switch (type) {
+      case 'tap':
+        navigator.vibrate(10)
+        break
+      case 'eat':
+        navigator.vibrate(25)
+        break
+      case 'bonus':
+        navigator.vibrate([30, 40, 50])
+        break
+      case 'game-over':
+        navigator.vibrate([60, 50, 100])
+        break
+    }
+  } catch {
+    // Abaikan jika peramban tidak mengizinkan getaran.
+  }
 }
 
 function readStoredNumber(key: string, fallbackKey?: string): number {
@@ -205,7 +240,9 @@ export function SnakeGame() {
   const [state, dispatch] = useReducer(reducer, undefined, createGameState)
   const [muted, setMuted] = useState(readStoredMute)
   const boardRef = useRef<HTMLDivElement>(null)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const prevScoreRef = useRef(state.score)
+  const prevFoodsEatenRef = useRef(state.foodsEaten)
   const prevStatusRef = useRef(state.status)
   const prevCountdownRef = useRef(state.countdown)
   const prevBonusFoodRef = useRef(state.bonusFood)
@@ -219,19 +256,84 @@ export function SnakeGame() {
     })
   }
 
+  const handleDirectionInput = useCallback(
+    (direction: Direction) => {
+      unlockAudio()
+      triggerHaptic('tap')
+
+      if (state.status === 'idle') {
+        if (direction === 'left') {
+          return
+        }
+        dispatch({ type: 'start' })
+      }
+
+      dispatch({ type: 'direction', direction })
+    },
+    [state.status],
+  )
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length !== 1) {
+      return
+    }
+    const touch = event.touches[0]
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current) {
+      return
+    }
+    const touch = event.changedTouches[0]
+    if (!touch) {
+      touchStartRef.current = null
+      return
+    }
+
+    const dx = touch.clientX - touchStartRef.current.x
+    const dy = touch.clientY - touchStartRef.current.y
+    touchStartRef.current = null
+
+    const absX = Math.abs(dx)
+    const absY = Math.abs(dy)
+    const SWIPE_THRESHOLD = 24
+
+    if (Math.max(absX, absY) < SWIPE_THRESHOLD) {
+      return
+    }
+
+    if (absX > absY) {
+      handleDirectionInput(dx > 0 ? 'right' : 'left')
+    } else {
+      handleDirectionInput(dy > 0 ? 'down' : 'up')
+    }
+  }
+
   useEffect(() => {
     if (state.status === 'running') {
       const scoreDiff = state.score - prevScoreRef.current
-      if (scoreDiff > 0 && !muted) {
+      const foodsDiff = state.foodsEaten - prevFoodsEatenRef.current
+
+      if (scoreDiff > 0) {
         if (scoreDiff >= BONUS_FOOD_POINTS) {
-          playBonusEatSound()
-        } else {
-          const oldSpeed = getSpeedLevel(state.difficulty, prevScoreRef.current)
-          const newSpeed = getSpeedLevel(state.difficulty, state.score)
-          if (newSpeed > oldSpeed) {
-            playSpeedUpSound()
-          } else {
-            playEatSound()
+          triggerHaptic('bonus')
+          if (!muted) {
+            playBonusEatSound()
+          }
+        } else if (foodsDiff > 0) {
+          triggerHaptic('eat')
+          if (!muted) {
+            const oldSpeed = getSpeedLevel(
+              state.difficulty,
+              prevFoodsEatenRef.current,
+            )
+            const newSpeed = getSpeedLevel(state.difficulty, state.foodsEaten)
+            if (newSpeed > oldSpeed) {
+              playSpeedUpSound()
+            } else {
+              playEatSound()
+            }
           }
         }
       }
@@ -241,8 +343,16 @@ export function SnakeGame() {
       }
     }
     prevScoreRef.current = state.score
+    prevFoodsEatenRef.current = state.foodsEaten
     prevBonusFoodRef.current = state.bonusFood
-  }, [state.score, state.status, state.difficulty, state.bonusFood, muted])
+  }, [
+    state.score,
+    state.foodsEaten,
+    state.status,
+    state.difficulty,
+    state.bonusFood,
+    muted,
+  ])
 
   useEffect(() => {
     if (state.status === 'countdown') {
@@ -270,6 +380,7 @@ export function SnakeGame() {
       state.status === 'game-over' &&
       prevStatusRef.current !== 'game-over'
     ) {
+      triggerHaptic('game-over')
       if (!muted) {
         playGameOverSound()
       }
@@ -293,11 +404,11 @@ export function SnakeGame() {
 
     const timer = window.setInterval(
       () => dispatch({ type: 'step' }),
-      getTickMs(state.difficulty, state.score),
+      getTickMs(state.difficulty, state.foodsEaten),
     )
 
     return () => window.clearInterval(timer)
-  }, [state.status, state.difficulty, state.score])
+  }, [state.status, state.difficulty, state.foodsEaten])
 
   useEffect(() => {
     if (state.bestScore > 0) {
@@ -408,22 +519,13 @@ export function SnakeGame() {
       }
 
       event.preventDefault()
-      unlockAudio()
-
-      if (state.status === 'idle') {
-        if (direction === 'left') {
-          return
-        }
-        dispatch({ type: 'start' })
-      }
-
-      dispatch({ type: 'direction', direction })
+      handleDirectionInput(direction)
     }
 
     window.addEventListener('keydown', handleKeyDown)
 
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [state.status])
+  }, [state.status, handleDirectionInput])
 
   useEffect(() => {
     if (state.status === 'running') {
@@ -442,7 +544,7 @@ export function SnakeGame() {
   }
 
   const mode = getDifficulty(state.difficulty)
-  const speedLevel = getSpeedLevel(state.difficulty, state.score)
+  const speedLevel = getSpeedLevel(state.difficulty, state.foodsEaten)
   const canPause =
     state.status === 'countdown' ||
     state.status === 'running' ||
@@ -464,6 +566,29 @@ export function SnakeGame() {
     <div className="snake-game">
       <div className="snake-stage">
         <div className="snake-board-wrap">
+          <div className="snake-mobile-hud" aria-hidden="true">
+            <div className="snake-mobile-hud__item">
+              <span className="snake-mobile-hud__label">Skor</span>
+              <span className="snake-mobile-hud__value">
+                {formatScore(state.score)}
+              </span>
+            </div>
+            <div className="snake-mobile-hud__item">
+              <span className="snake-mobile-hud__label">Terbaik</span>
+              <span className="snake-mobile-hud__value">
+                {formatScore(state.bestScore)}
+              </span>
+            </div>
+            <div className="snake-mobile-hud__item">
+              <span className="snake-mobile-hud__label">Panjang</span>
+              <span className="snake-mobile-hud__value">{state.length}</span>
+            </div>
+            <div className="snake-mobile-hud__item">
+              <span className="snake-mobile-hud__label">Kec.</span>
+              <span className="snake-mobile-hud__value">Lv {speedLevel}</span>
+            </div>
+          </div>
+
           <div
             ref={boardRef}
             className="snake-board"
@@ -472,6 +597,8 @@ export function SnakeGame() {
             role="group"
             aria-label="Papan Snake"
             aria-describedby="snake-instructions"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
             <div className="snake-board__grid" aria-hidden="true" />
 
@@ -605,6 +732,54 @@ export function SnakeGame() {
                 ) : null}
               </div>
             ) : null}
+          </div>
+
+          <div
+            className="snake-dpad"
+            aria-label="Kontrol arah virtual"
+            role="group"
+          >
+            <div className="snake-dpad__layout">
+              <div className="snake-dpad__row snake-dpad__row--top">
+                <button
+                  type="button"
+                  className="snake-dpad__btn snake-dpad__btn--up"
+                  aria-label="Atas"
+                  onClick={() => handleDirectionInput('up')}
+                >
+                  <ArrowUp size={22} aria-hidden="true" />
+                </button>
+              </div>
+              <div className="snake-dpad__row snake-dpad__row--middle">
+                <button
+                  type="button"
+                  className="snake-dpad__btn snake-dpad__btn--left"
+                  aria-label="Kiri"
+                  onClick={() => handleDirectionInput('left')}
+                >
+                  <ArrowLeft size={22} aria-hidden="true" />
+                </button>
+                <div className="snake-dpad__center" aria-hidden="true" />
+                <button
+                  type="button"
+                  className="snake-dpad__btn snake-dpad__btn--right"
+                  aria-label="Kanan"
+                  onClick={() => handleDirectionInput('right')}
+                >
+                  <ArrowRight size={22} aria-hidden="true" />
+                </button>
+              </div>
+              <div className="snake-dpad__row snake-dpad__row--bottom">
+                <button
+                  type="button"
+                  className="snake-dpad__btn snake-dpad__btn--down"
+                  aria-label="Bawah"
+                  onClick={() => handleDirectionInput('down')}
+                >
+                  <ArrowDown size={22} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
           </div>
 
           <p className="visually-hidden" aria-live="polite">
@@ -801,7 +976,7 @@ export function SnakeGame() {
             <h2 id="snake-guide-title" className="snake-guide__title">
               Cara main
             </h2>
-            <span className="snake-guide__badge">Kontrol keyboard</span>
+            <span className="snake-guide__badge">Kontrol permainan</span>
           </div>
 
           <ul className="snake-controls" id="snake-instructions">
@@ -820,6 +995,16 @@ export function SnakeGame() {
                 <kbd>D</kbd>
               </span>
               <span className="snake-controls__desc">untuk bergerak</span>
+            </li>
+            <li>
+              <span className="snake-keys">
+                <kbd>Gesek</kbd>
+              </span>
+              <span>atau</span>
+              <span className="snake-keys">
+                <kbd>D-Pad</kbd>
+              </span>
+              <span className="snake-controls__desc">kontrol layar sentuh</span>
             </li>
             <li>
               <kbd>Spasi</kbd>

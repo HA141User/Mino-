@@ -27,7 +27,7 @@ export const DIFFICULTIES: DifficultyConfig[] = [
     tickMs: 180,
     stepMs: 6,
     minTickMs: 100,
-    description: 'Langkah lebih lambat untuk pemanasan.',
+    description: 'Langkah lebih lambat.',
   },
   {
     id: 'normal',
@@ -111,6 +111,7 @@ export type SnakeState = {
   queuedDirection: Direction
   directionQueue: Direction[]
   score: number
+  foodsEaten: number
   length: number
   countdown: number
   status: SnakeStatus
@@ -202,6 +203,7 @@ export function createInitialState(): SnakeState {
     queuedDirection: 'right',
     directionQueue: [],
     score: 0,
+    foodsEaten: 0,
     length: snake.length,
     countdown: COUNTDOWN_START,
     status: 'idle',
@@ -348,8 +350,8 @@ export function step(state: SnakeState): SnakeState {
     nextHead.x === state.food.x && nextHead.y === state.food.y
   const willEatBonus = Boolean(
     state.bonusFood &&
-      nextHead.x === state.bonusFood.x &&
-      nextHead.y === state.bonusFood.y,
+    nextHead.x === state.bonusFood.x &&
+    nextHead.y === state.bonusFood.y,
   )
   const willEatAny = willEatRegular || willEatBonus
 
@@ -377,6 +379,10 @@ export function step(state: SnakeState): SnakeState {
 
   const food = willEatRegular ? spawnFood(snake) : state.food
 
+  const nextFoodsEaten = willEatRegular
+    ? (state.foodsEaten ?? 0) + 1
+    : (state.foodsEaten ?? 0)
+
   let addedScore = 0
   if (willEatRegular) {
     addedScore += 1
@@ -395,8 +401,8 @@ export function step(state: SnakeState): SnakeState {
       nextTimer > 0 ? { ...state.bonusFood, timer: nextTimer } : null
   } else if (
     willEatRegular &&
-    nextScore > 0 &&
-    nextScore % BONUS_FOOD_INTERVAL === 0
+    nextFoodsEaten > 0 &&
+    nextFoodsEaten % BONUS_FOOD_INTERVAL === 0
   ) {
     nextBonusFood = spawnBonusFood(snake, food)
   }
@@ -409,6 +415,7 @@ export function step(state: SnakeState): SnakeState {
     queuedDirection: nextQueuedDirection,
     directionQueue: remainingQueue,
     score: nextScore,
+    foodsEaten: nextFoodsEaten,
     length: snake.length,
     countdown: 0,
     status: 'running',

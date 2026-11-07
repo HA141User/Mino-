@@ -35,6 +35,7 @@ function stateWith(
     queuedDirection: 'right',
     directionQueue: [],
     score: 0,
+    foodsEaten: 0,
     length: snake.length,
     countdown: 0,
     status: 'running',
@@ -238,19 +239,24 @@ describe('step: makan dan tabrakan', () => {
     expect(next.length).toBe(4)
   })
 
-  it('memunculkan buah bonus berwaktu saat skor mencapai kelipatan 5', () => {
+  it('memunculkan buah bonus berwaktu setiap 5 makanan reguler (+1) dimakan', () => {
     const state = stateWith(
       [
         { x: 5, y: 5 },
         { x: 4, y: 5 },
         { x: 3, y: 5 },
       ],
-      { score: BONUS_FOOD_INTERVAL - 1, food: { x: 6, y: 5 } },
+      {
+        score: 10,
+        foodsEaten: BONUS_FOOD_INTERVAL - 1,
+        food: { x: 6, y: 5 },
+      },
     )
 
     const next = step(state)
 
-    expect(next.score).toBe(BONUS_FOOD_INTERVAL)
+    expect(next.foodsEaten).toBe(BONUS_FOOD_INTERVAL)
+    expect(next.score).toBe(11)
     expect(next.bonusFood).not.toBeNull()
     expect(next.bonusFood?.timer).toBe(BONUS_FOOD_DURATION_TICKS)
     expect(next.bonusFood?.maxTimer).toBe(BONUS_FOOD_DURATION_TICKS)
@@ -259,6 +265,39 @@ describe('step: makan dan tabrakan', () => {
     expect(
       next.bonusFood?.x === next.food.x && next.bonusFood?.y === next.food.y,
     ).toBe(false)
+  })
+
+  it('memakan buah bonus menambah skor +3 tetapi tidak menambah hitungan makanan reguler', () => {
+    const state = stateWith(
+      [
+        { x: 5, y: 5 },
+        { x: 4, y: 5 },
+        { x: 3, y: 5 },
+      ],
+      {
+        score: 5,
+        foodsEaten: 5,
+        bonusFood: { x: 6, y: 5, timer: 20, maxTimer: 30, points: 3 },
+      },
+    )
+
+    const next = step(state)
+
+    expect(next.score).toBe(8)
+    expect(next.foodsEaten).toBe(5)
+    expect(next.bonusFood).toBeNull()
+
+    // Makan makanan reguler ke-6
+    const afterFood6 = step({ ...next, food: { x: 7, y: 5 } })
+    expect(afterFood6.foodsEaten).toBe(6)
+    expect(afterFood6.score).toBe(9)
+    expect(afterFood6.bonusFood).toBeNull()
+
+    // Makan makanan reguler ke-7 (skor menjadi 10 yang merupakan kelipatan 5, tetapi belum 5 makanan reguler)
+    const afterFood7 = step({ ...afterFood6, food: { x: 8, y: 5 } })
+    expect(afterFood7.foodsEaten).toBe(7)
+    expect(afterFood7.score).toBe(10)
+    expect(afterFood7.bonusFood).toBeNull()
   })
 
   it('mengurangi timer buah bonus tiap langkah dan menghilangkannya saat habis', () => {
