@@ -200,3 +200,57 @@ export function playGameOverSound(): void {
   }
 }
 
+/**
+ * Suara kemunculan makanan bonus: 2 nada panggil lembut (E5 -> A5)
+ */
+export function playBonusSpawnSound(): void {
+  playTone({
+    frequency: 659.25,
+    duration: 0.06,
+    startTime: 0,
+    type: 'triangle',
+    gain: 0.14,
+  })
+  playTone({
+    frequency: 880.0,
+    duration: 0.1,
+    startTime: 0.05,
+    type: 'triangle',
+    gain: 0.16,
+  })
+}
+
+/**
+ * Suara makan makanan bonus: 4 nada arpeggio berkilau (C5 -> E5 -> G5 -> C6)
+ */
+export function playBonusEatSound(): void {
+  playTone({
+    frequency: 523.25,
+    duration: 0.04,
+    startTime: 0,
+    type: 'triangle',
+    gain: 0.15,
+  })
+  playTone({
+    frequency: 659.25,
+    duration: 0.04,
+    startTime: 0.035,
+    type: 'triangle',
+    gain: 0.16,
+  })
+  playTone({
+    frequency: 783.99,
+    duration: 0.04,
+    startTime: 0.07,
+    type: 'triangle',
+    gain: 0.17,
+  })
+  playTone({
+    frequency: 1046.5,
+    duration: 0.1,
+    startTime: 0.105,
+    type: 'triangle',
+    gain: 0.19,
+  })
+}
+

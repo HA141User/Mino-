@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   isAudioSupported,
+  playBonusEatSound,
+  playBonusSpawnSound,
   playCountdownGoSound,
   playCountdownTickSound,
   playEatSound,
@@ -58,6 +60,8 @@ describe('sound module', () => {
       playCountdownGoSound()
       playSpeedUpSound()
       playGameOverSound()
+      playBonusSpawnSound()
+      playBonusEatSound()
     }).not.toThrow()
   })
 })

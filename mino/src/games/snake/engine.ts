@@ -5,6 +5,9 @@ export const COUNTDOWN_STEP_MS = 700
 export const SPEED_STEP_FOODS = 5
 export const SPEED_MAX_LEVEL = 5
 export const INPUT_BUFFER_LIMIT = 2
+export const BONUS_FOOD_INTERVAL = 5
+export const BONUS_FOOD_DURATION_TICKS = 30
+export const BONUS_FOOD_POINTS = 3
 
 export type Difficulty = 'santai' | 'normal' | 'cepat'
 
@@ -92,9 +95,18 @@ export type SnakeStatus =
   | 'paused'
   | 'game-over'
 
+export type BonusFood = {
+  x: number
+  y: number
+  timer: number
+  maxTimer: number
+  points: number
+}
+
 export type SnakeState = {
   snake: Point[]
   food: Point
+  bonusFood: BonusFood | null
   direction: Direction
   queuedDirection: Direction
   directionQueue: Direction[]
@@ -147,12 +159,45 @@ export function spawnFood(snake: Point[], random = Math.random): Point {
   return free[Math.floor(random() * free.length)]
 }
 
+export function spawnBonusFood(
+  snake: Point[],
+  regularFood: Point,
+  random = Math.random,
+): BonusFood | null {
+  const occupied = new Set(snake.map(pointKey))
+  occupied.add(pointKey(regularFood))
+
+  const free: Point[] = []
+
+  for (let y = 0; y < BOARD_SIZE; y += 1) {
+    for (let x = 0; x < BOARD_SIZE; x += 1) {
+      if (!occupied.has(`${x},${y}`)) {
+        free.push({ x, y })
+      }
+    }
+  }
+
+  if (free.length === 0) {
+    return null
+  }
+
+  const chosen = free[Math.floor(random() * free.length)]
+
+  return {
+    ...chosen,
+    timer: BONUS_FOOD_DURATION_TICKS,
+    maxTimer: BONUS_FOOD_DURATION_TICKS,
+    points: BONUS_FOOD_POINTS,
+  }
+}
+
 export function createInitialState(): SnakeState {
   const snake = INITIAL_SNAKE.map((point) => ({ ...point }))
 
   return {
     snake,
     food: spawnFood(snake),
+    bonusFood: null,
     direction: 'right',
     queuedDirection: 'right',
     directionQueue: [],
@@ -299,8 +344,16 @@ export function step(state: SnakeState): SnakeState {
     y: (head.y + vector.y + BOARD_SIZE) % BOARD_SIZE,
   }
 
-  const willEat = nextHead.x === state.food.x && nextHead.y === state.food.y
-  const body = willEat ? state.snake : state.snake.slice(0, -1)
+  const willEatRegular =
+    nextHead.x === state.food.x && nextHead.y === state.food.y
+  const willEatBonus = Boolean(
+    state.bonusFood &&
+      nextHead.x === state.bonusFood.x &&
+      nextHead.y === state.bonusFood.y,
+  )
+  const willEatAny = willEatRegular || willEatBonus
+
+  const body = willEatAny ? state.snake : state.snake.slice(0, -1)
   const hitsSelf = body.some(
     (segment) => segment.x === nextHead.x && segment.y === nextHead.y,
   )
@@ -318,17 +371,44 @@ export function step(state: SnakeState): SnakeState {
     }
   }
 
-  const snake = willEat
+  const snake = willEatAny
     ? [nextHead, ...state.snake]
     : [nextHead, ...state.snake.slice(0, -1)]
 
+  const food = willEatRegular ? spawnFood(snake) : state.food
+
+  let addedScore = 0
+  if (willEatRegular) {
+    addedScore += 1
+  }
+  if (willEatBonus) {
+    addedScore += state.bonusFood?.points ?? BONUS_FOOD_POINTS
+  }
+  const nextScore = state.score + addedScore
+
+  let nextBonusFood: BonusFood | null = null
+  if (willEatBonus) {
+    nextBonusFood = null
+  } else if (state.bonusFood) {
+    const nextTimer = state.bonusFood.timer - 1
+    nextBonusFood =
+      nextTimer > 0 ? { ...state.bonusFood, timer: nextTimer } : null
+  } else if (
+    willEatRegular &&
+    nextScore > 0 &&
+    nextScore % BONUS_FOOD_INTERVAL === 0
+  ) {
+    nextBonusFood = spawnBonusFood(snake, food)
+  }
+
   return {
     snake,
-    food: willEat ? spawnFood(snake) : state.food,
+    food,
+    bonusFood: nextBonusFood,
     direction: nextDirection,
     queuedDirection: nextQueuedDirection,
     directionQueue: remainingQueue,
-    score: willEat ? state.score + 1 : state.score,
+    score: nextScore,
     length: snake.length,
     countdown: 0,
     status: 'running',

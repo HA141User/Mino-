@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   BOARD_SIZE,
+  BONUS_FOOD_DURATION_TICKS,
+  BONUS_FOOD_INTERVAL,
+  BONUS_FOOD_POINTS,
   COUNTDOWN_START,
   DIFFICULTIES,
   createInitialState,
@@ -11,6 +14,7 @@ import {
   pauseGame,
   queueDirection,
   restartGame,
+  spawnBonusFood,
   spawnFood,
   startGame,
   step,
@@ -26,6 +30,7 @@ function stateWith(
   return {
     snake: snake.map((point) => ({ ...point })),
     food: { x: 19, y: 19 },
+    bonusFood: null,
     direction: 'right',
     queuedDirection: 'right',
     directionQueue: [],
@@ -231,6 +236,83 @@ describe('step: makan dan tabrakan', () => {
     expect(next.status).toBe('running')
     expect(head(next)).toEqual({ x: 5, y: 6 })
     expect(next.length).toBe(4)
+  })
+
+  it('memunculkan buah bonus berwaktu saat skor mencapai kelipatan 5', () => {
+    const state = stateWith(
+      [
+        { x: 5, y: 5 },
+        { x: 4, y: 5 },
+        { x: 3, y: 5 },
+      ],
+      { score: BONUS_FOOD_INTERVAL - 1, food: { x: 6, y: 5 } },
+    )
+
+    const next = step(state)
+
+    expect(next.score).toBe(BONUS_FOOD_INTERVAL)
+    expect(next.bonusFood).not.toBeNull()
+    expect(next.bonusFood?.timer).toBe(BONUS_FOOD_DURATION_TICKS)
+    expect(next.bonusFood?.maxTimer).toBe(BONUS_FOOD_DURATION_TICKS)
+    expect(next.bonusFood?.points).toBe(BONUS_FOOD_POINTS)
+    expect(isOnSnake(next.snake, next.bonusFood!)).toBe(false)
+    expect(
+      next.bonusFood?.x === next.food.x && next.bonusFood?.y === next.food.y,
+    ).toBe(false)
+  })
+
+  it('mengurangi timer buah bonus tiap langkah dan menghilangkannya saat habis', () => {
+    const state = stateWith(
+      [
+        { x: 5, y: 5 },
+        { x: 4, y: 5 },
+        { x: 3, y: 5 },
+      ],
+      {
+        bonusFood: { x: 10, y: 10, timer: 2, maxTimer: 30, points: 3 },
+      },
+    )
+
+    const step1 = step(state)
+    expect(step1.bonusFood?.timer).toBe(1)
+
+    const step2 = step(step1)
+    expect(step2.bonusFood).toBeNull()
+  })
+
+  it('memberikan poin ekstra (+3) dan menambah panjang saat memakan buah bonus', () => {
+    const state = stateWith(
+      [
+        { x: 5, y: 5 },
+        { x: 4, y: 5 },
+        { x: 3, y: 5 },
+      ],
+      {
+        score: 2,
+        length: 3,
+        bonusFood: { x: 6, y: 5, timer: 20, maxTimer: 30, points: 3 },
+      },
+    )
+
+    const next = step(state)
+
+    expect(next.score).toBe(5)
+    expect(next.length).toBe(4)
+    expect(next.bonusFood).toBeNull()
+    expect(head(next)).toEqual({ x: 6, y: 5 })
+  })
+
+  it('spawnBonusFood menempatkan buah di luar badan ular dan makanan reguler', () => {
+    const snake: Point[] = [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+    ]
+    const food: Point = { x: 2, y: 0 }
+
+    const bonus = spawnBonusFood(snake, food)
+    expect(bonus).not.toBeNull()
+    expect(isOnSnake(snake, bonus!)).toBe(false)
+    expect(bonus?.x === food.x && bonus?.y === food.y).toBe(false)
   })
 
   it.each(['idle', 'countdown', 'paused', 'game-over'] as const)(

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Volume2, VolumeX } from 'lucide-react'
 import {
   BOARD_SIZE,
+  BONUS_FOOD_POINTS,
   COUNTDOWN_STEP_MS,
   DEFAULT_DIFFICULTY,
   DIFFICULTIES,
@@ -24,6 +25,8 @@ import {
 } from './engine'
 import type { Difficulty, Direction, Point, SnakeState } from './engine'
 import {
+  playBonusEatSound,
+  playBonusSpawnSound,
   playCountdownGoSound,
   playCountdownTickSound,
   playEatSound,
@@ -205,6 +208,7 @@ export function SnakeGame() {
   const prevScoreRef = useRef(state.score)
   const prevStatusRef = useRef(state.status)
   const prevCountdownRef = useRef(state.countdown)
+  const prevBonusFoodRef = useRef(state.bonusFood)
 
   const toggleMute = () => {
     unlockAudio()
@@ -216,19 +220,29 @@ export function SnakeGame() {
   }
 
   useEffect(() => {
-    if (state.status === 'running' && state.score > prevScoreRef.current) {
-      if (!muted) {
-        const oldSpeed = getSpeedLevel(state.difficulty, prevScoreRef.current)
-        const newSpeed = getSpeedLevel(state.difficulty, state.score)
-        if (newSpeed > oldSpeed) {
-          playSpeedUpSound()
+    if (state.status === 'running') {
+      const scoreDiff = state.score - prevScoreRef.current
+      if (scoreDiff > 0 && !muted) {
+        if (scoreDiff >= BONUS_FOOD_POINTS) {
+          playBonusEatSound()
         } else {
-          playEatSound()
+          const oldSpeed = getSpeedLevel(state.difficulty, prevScoreRef.current)
+          const newSpeed = getSpeedLevel(state.difficulty, state.score)
+          if (newSpeed > oldSpeed) {
+            playSpeedUpSound()
+          } else {
+            playEatSound()
+          }
         }
+      }
+
+      if (state.bonusFood && !prevBonusFoodRef.current && !muted) {
+        playBonusSpawnSound()
       }
     }
     prevScoreRef.current = state.score
-  }, [state.score, state.status, state.difficulty, muted])
+    prevBonusFoodRef.current = state.bonusFood
+  }, [state.score, state.status, state.difficulty, state.bonusFood, muted])
 
   useEffect(() => {
     if (state.status === 'countdown') {
@@ -479,6 +493,14 @@ export function SnakeGame() {
               aria-hidden="true"
             />
 
+            {state.bonusFood ? (
+              <div
+                className="snake-food snake-food--bonus"
+                style={cellStyle(state.bonusFood)}
+                aria-hidden="true"
+              />
+            ) : null}
+
             {state.status !== 'running' ? (
               <div className="snake-overlay">
                 {state.status === 'countdown' ? (
@@ -684,6 +706,36 @@ export function SnakeGame() {
               </div>
             </div>
           </div>
+
+          {state.bonusFood ? (
+            <div
+              className="snake-bonus-alert"
+              role="status"
+              aria-label="Buah bonus aktif"
+            >
+              <div className="snake-bonus-alert__header">
+                <span className="snake-bonus-alert__label">
+                  ★ Buah Bonus (+{state.bonusFood.points})
+                </span>
+                <span className="snake-bonus-alert__timer">
+                  {Math.ceil(
+                    (state.bonusFood.timer / state.bonusFood.maxTimer) * 100,
+                  )}
+                  %
+                </span>
+              </div>
+              <div
+                className="snake-bonus-alert__meter"
+                style={
+                  {
+                    '--bonus-progress': `${(state.bonusFood.timer / state.bonusFood.maxTimer) * 100}%`,
+                  } as CSSProperties
+                }
+              >
+                <div className="snake-bonus-alert__fill" />
+              </div>
+            </div>
+          ) : null}
 
           <div className="snake-speed">
             <div className="snake-speed__header">
