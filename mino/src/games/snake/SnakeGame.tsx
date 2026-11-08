@@ -274,6 +274,7 @@ export function SnakeGame() {
   )
 
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    unlockAudio()
     if (event.touches.length !== 1) {
       return
     }
@@ -315,31 +316,37 @@ export function SnakeGame() {
       const scoreDiff = state.score - prevScoreRef.current
       const foodsDiff = state.foodsEaten - prevFoodsEatenRef.current
 
-      if (scoreDiff > 0) {
-        if (scoreDiff >= BONUS_FOOD_POINTS) {
-          triggerHaptic('bonus')
-          if (!muted) {
-            playBonusEatSound()
-          }
-        } else if (foodsDiff > 0) {
-          triggerHaptic('eat')
-          if (!muted) {
-            const oldSpeed = getSpeedLevel(
-              state.difficulty,
-              prevFoodsEatenRef.current,
-            )
-            const newSpeed = getSpeedLevel(state.difficulty, state.foodsEaten)
-            if (newSpeed > oldSpeed) {
-              playSpeedUpSound()
-            } else {
-              playEatSound()
-            }
+      let nextAudioTime = 0
+
+      if (scoreDiff >= BONUS_FOOD_POINTS) {
+        triggerHaptic('bonus')
+        if (!muted) {
+          playBonusEatSound()
+          nextAudioTime = 0.22
+        }
+      } else if (foodsDiff > 0) {
+        triggerHaptic('eat')
+        if (!muted) {
+          // Suara makan selalu berbunyi untuk setiap makanan reguler
+          playEatSound()
+          nextAudioTime = 0.12
+
+          const oldSpeed = getSpeedLevel(
+            state.difficulty,
+            prevFoodsEatenRef.current,
+          )
+          const newSpeed = getSpeedLevel(state.difficulty, state.foodsEaten)
+          if (newSpeed > oldSpeed) {
+            // Jingle naik kecepatan dijadwalkan tepat setelah nada makan selesai
+            playSpeedUpSound(nextAudioTime)
+            nextAudioTime += 0.2
           }
         }
       }
 
       if (state.bonusFood && !prevBonusFoodRef.current && !muted) {
-        playBonusSpawnSound()
+        // Lonceng kemunculan buah bonus dijadwalkan berurutan agar tidak tabrakan
+        playBonusSpawnSound(nextAudioTime > 0 ? nextAudioTime : 0)
       }
     }
     prevScoreRef.current = state.score
@@ -591,7 +598,11 @@ export function SnakeGame() {
 
           <div
             ref={boardRef}
-            className="snake-board"
+            className={
+              state.status === 'game-over'
+                ? 'snake-board snake-board--game-over'
+                : 'snake-board'
+            }
             style={boardStyle}
             tabIndex={0}
             role="group"
@@ -602,17 +613,32 @@ export function SnakeGame() {
           >
             <div className="snake-board__grid" aria-hidden="true" />
 
-            {state.snake.map((segment, index) => (
-              <div
-                key={`${segment.x}-${segment.y}-${index}`}
-                className={
-                  index === 0
-                    ? 'snake-segment snake-segment--head'
-                    : 'snake-segment'
-                }
-                style={cellStyle(segment)}
-              />
-            ))}
+            {state.snake.map((segment, index) => {
+              const isHead = index === 0
+              const isTail = index === state.snake.length - 1
+
+              let segmentClass = 'snake-segment'
+              if (isHead) {
+                segmentClass += ` snake-segment--head snake-segment--head-${state.direction}`
+              } else if (isTail) {
+                segmentClass += ' snake-segment--tail'
+              }
+
+              return (
+                <div
+                  key={`${segment.x}-${segment.y}-${index}`}
+                  className={segmentClass}
+                  style={cellStyle(segment)}
+                >
+                  {isHead ? (
+                    <div className="snake-head-eyes" aria-hidden="true">
+                      <span className="snake-head-eye" />
+                      <span className="snake-head-eye" />
+                    </div>
+                  ) : null}
+                </div>
+              )
+            })}
 
             <div
               className="snake-food"
@@ -672,7 +698,10 @@ export function SnakeGame() {
                       <button
                         type="button"
                         className="button"
-                        onClick={() => dispatch({ type: 'start' })}
+                        onClick={() => {
+                          unlockAudio()
+                          dispatch({ type: 'start' })
+                        }}
                       >
                         Mulai
                       </button>
@@ -693,7 +722,10 @@ export function SnakeGame() {
                       <button
                         type="button"
                         className="button"
-                        onClick={() => dispatch({ type: 'start' })}
+                        onClick={() => {
+                          unlockAudio()
+                          dispatch({ type: 'start' })
+                        }}
                       >
                         Lanjutkan
                       </button>
@@ -720,7 +752,10 @@ export function SnakeGame() {
                       <button
                         type="button"
                         className="button"
-                        onClick={() => dispatch({ type: 'restart' })}
+                        onClick={() => {
+                          unlockAudio()
+                          dispatch({ type: 'restart' })
+                        }}
                       >
                         Main lagi
                       </button>
@@ -837,12 +872,13 @@ export function SnakeGame() {
                     }
                     aria-pressed={active}
                     disabled={modeLocked}
-                    onClick={() =>
+                    onClick={() => {
+                      unlockAudio()
                       dispatch({
                         type: 'set-difficulty',
                         difficulty: difficulty.id,
                       })
-                    }
+                    }}
                   >
                     {difficulty.label}
                   </button>

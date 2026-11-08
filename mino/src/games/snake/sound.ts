@@ -88,19 +88,33 @@ function playTone({
     const osc = ctx.createOscillator()
     const gainNode = ctx.createGain()
 
-    const triggerAt = ctx.currentTime + startTime
+    // Lookahead buffer aman 5ms agar triggerAt tidak jatuh di masa lalu audio clock
+    const triggerAt = Math.max(
+      ctx.currentTime + 0.005,
+      ctx.currentTime + startTime,
+    )
 
     osc.type = type
     osc.frequency.setValueAtTime(frequency, triggerAt)
 
     gainNode.gain.setValueAtTime(gain, triggerAt)
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, triggerAt + duration)
+    // Linear ramp stabil tanpa risiko galat pembagian nol logaritmik
+    gainNode.gain.linearRampToValueAtTime(0.0001, triggerAt + duration)
 
     osc.connect(gainNode)
     gainNode.connect(ctx.destination)
 
     osc.start(triggerAt)
     osc.stop(triggerAt + duration)
+
+    osc.onended = () => {
+      try {
+        osc.disconnect()
+        gainNode.disconnect()
+      } catch {
+        // Abaikan jika sudah terputus
+      }
+    }
   } catch {
     // Abaikan jika konteks audio gagal dijalankan
   }
@@ -109,18 +123,18 @@ function playTone({
 /**
  * Suara makan apel: 2 nada ceria naik (C5 -> G5)
  */
-export function playEatSound(): void {
+export function playEatSound(startTimeOffset = 0): void {
   playTone({
     frequency: 523.25,
     duration: 0.05,
-    startTime: 0,
+    startTime: startTimeOffset,
     type: 'triangle',
     gain: 0.16,
   })
   playTone({
     frequency: 783.99,
     duration: 0.07,
-    startTime: 0.045,
+    startTime: startTimeOffset + 0.045,
     type: 'triangle',
     gain: 0.18,
   })
@@ -143,25 +157,25 @@ export function playCountdownGoSound(): void {
 /**
  * Suara akselerasi kecepatan (naik tiap 5 makanan)
  */
-export function playSpeedUpSound(): void {
+export function playSpeedUpSound(startTimeOffset = 0): void {
   playTone({
     frequency: 587.33,
     duration: 0.05,
-    startTime: 0,
+    startTime: startTimeOffset,
     type: 'triangle',
     gain: 0.14,
   })
   playTone({
     frequency: 739.99,
     duration: 0.05,
-    startTime: 0.05,
+    startTime: startTimeOffset + 0.05,
     type: 'triangle',
     gain: 0.16,
   })
   playTone({
     frequency: 880.0,
     duration: 0.09,
-    startTime: 0.1,
+    startTime: startTimeOffset + 0.1,
     type: 'triangle',
     gain: 0.18,
   })
@@ -180,21 +194,30 @@ export function playGameOverSound(): void {
     const osc = ctx.createOscillator()
     const gainNode = ctx.createGain()
 
-    const now = ctx.currentTime
+    const now = ctx.currentTime + 0.005
     const duration = 0.22
 
     osc.type = 'sawtooth'
     osc.frequency.setValueAtTime(220, now)
-    osc.frequency.exponentialRampToValueAtTime(60, now + duration)
+    osc.frequency.linearRampToValueAtTime(60, now + duration)
 
     gainNode.gain.setValueAtTime(0.2, now)
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration)
+    gainNode.gain.linearRampToValueAtTime(0.0001, now + duration)
 
     osc.connect(gainNode)
     gainNode.connect(ctx.destination)
 
     osc.start(now)
     osc.stop(now + duration)
+
+    osc.onended = () => {
+      try {
+        osc.disconnect()
+        gainNode.disconnect()
+      } catch {
+        // Abaikan jika sudah terputus
+      }
+    }
   } catch {
     // Abaikan jika konteks audio gagal dijalankan
   }
@@ -203,18 +226,18 @@ export function playGameOverSound(): void {
 /**
  * Suara kemunculan makanan bonus: 2 nada panggil lembut (E5 -> A5)
  */
-export function playBonusSpawnSound(): void {
+export function playBonusSpawnSound(startTimeOffset = 0): void {
   playTone({
     frequency: 659.25,
     duration: 0.06,
-    startTime: 0,
+    startTime: startTimeOffset,
     type: 'triangle',
     gain: 0.14,
   })
   playTone({
     frequency: 880.0,
     duration: 0.1,
-    startTime: 0.05,
+    startTime: startTimeOffset + 0.05,
     type: 'triangle',
     gain: 0.16,
   })
@@ -223,32 +246,32 @@ export function playBonusSpawnSound(): void {
 /**
  * Suara makan makanan bonus: 4 nada arpeggio berkilau (C5 -> E5 -> G5 -> C6)
  */
-export function playBonusEatSound(): void {
+export function playBonusEatSound(startTimeOffset = 0): void {
   playTone({
     frequency: 523.25,
     duration: 0.04,
-    startTime: 0,
+    startTime: startTimeOffset,
     type: 'triangle',
     gain: 0.15,
   })
   playTone({
     frequency: 659.25,
     duration: 0.04,
-    startTime: 0.035,
+    startTime: startTimeOffset + 0.035,
     type: 'triangle',
     gain: 0.16,
   })
   playTone({
     frequency: 783.99,
     duration: 0.04,
-    startTime: 0.07,
+    startTime: startTimeOffset + 0.07,
     type: 'triangle',
     gain: 0.17,
   })
   playTone({
     frequency: 1046.5,
     duration: 0.1,
-    startTime: 0.105,
+    startTime: startTimeOffset + 0.105,
     type: 'triangle',
     gain: 0.19,
   })

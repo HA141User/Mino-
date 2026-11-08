@@ -38,12 +38,12 @@
   background-image:
     linear-gradient(
       to right,
-      color-mix(in srgb, var(--color-border) 72%, transparent) 1px,
+      color-mix(in srgb, var(--color-border) 26%, transparent) 1px,
       transparent 1px
     ),
     linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--color-border) 72%, transparent) 1px,
+      color-mix(in srgb, var(--color-border) 26%, transparent) 1px,
       transparent 1px
     );
   background-size: calc(100% / var(--board-size)) calc(100% / var(--board-size));
@@ -58,13 +58,80 @@
 .snake-segment {
   background: var(--color-ink);
   border: 1px solid var(--color-surface);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .snake-segment--head {
   border-color: var(--color-ink);
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 2px var(--color-sage);
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1.5px var(--color-sage);
+  z-index: 2;
+  overflow: hidden;
+}
+
+.snake-segment--tail {
+  border-radius: 6px;
+  transform: scale(0.9);
+}
+
+.snake-head-eyes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.snake-head-eye {
+  position: absolute;
+  width: 24%;
+  height: 24%;
+  background: var(--color-surface);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+}
+
+.snake-head-eye::after {
+  content: '';
+  position: absolute;
+  inset: 22%;
+  background: var(--color-ink);
+  border-radius: 50%;
+}
+
+/* Orientasi tatapan mata ular mengikuti arah meluncur */
+.snake-segment--head-right .snake-head-eye:first-child {
+  top: 18%;
+  right: 14%;
+}
+.snake-segment--head-right .snake-head-eye:last-child {
+  bottom: 18%;
+  right: 14%;
+}
+
+.snake-segment--head-left .snake-head-eye:first-child {
+  top: 18%;
+  left: 14%;
+}
+.snake-segment--head-left .snake-head-eye:last-child {
+  bottom: 18%;
+  left: 14%;
+}
+
+.snake-segment--head-up .snake-head-eye:first-child {
+  top: 14%;
+  left: 18%;
+}
+.snake-segment--head-up .snake-head-eye:last-child {
+  top: 14%;
+  right: 18%;
+}
+
+.snake-segment--head-down .snake-head-eye:first-child {
+  bottom: 14%;
+  left: 18%;
+}
+.snake-segment--head-down .snake-head-eye:last-child {
+  bottom: 14%;
+  right: 18%;
 }
 
 .snake-food {
@@ -84,6 +151,25 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .snake-board--game-over {
+    animation: snake-board-shake 280ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  }
+
+  @keyframes snake-board-shake {
+    10%, 90% {
+      transform: translate3d(-1.5px, 0, 0);
+    }
+    20%, 80% {
+      transform: translate3d(2px, 0, 0);
+    }
+    30%, 50%, 70% {
+      transform: translate3d(-2px, 0, 0);
+    }
+    40%, 60% {
+      transform: translate3d(2px, 0, 0);
+    }
+  }
+
   .snake-food--bonus {
     animation: snake-bonus-pulse 900ms ease-in-out infinite alternate;
   }
