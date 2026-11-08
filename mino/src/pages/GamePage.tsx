@@ -49,7 +49,9 @@ export function GamePage() {
             title="Game lain"
             description="Beberapa hal lain yang bisa ditunggu."
           />
-          <GameGrid games={related} />
+          <div className="game-related_grid">
+            <GameGrid games={related} />
+          </div>
         </section>
       ) : null}
     </div>

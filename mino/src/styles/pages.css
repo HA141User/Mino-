@@ -463,6 +463,10 @@
   color: var(--color-muted);
 }
 
+.game-related_grid {
+  margin-top: var(--space-6);
+}
+
 @media (max-width: 900px) {
   .hero {
     padding-block: 3rem 2.5rem;
