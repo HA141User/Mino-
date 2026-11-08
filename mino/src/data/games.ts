@@ -25,17 +25,17 @@ export const categoryMeta: {
   {
     value: 'arcade',
     label: 'Arkade',
-    description: 'Game cepat dan fokus untuk jeda singkat.',
+    description: 'Refleks kilat buat jeda santai. Langsung tancap gas!',
   },
   {
     value: 'puzzle',
     label: 'Teka-teki',
-    description: 'Pelankan tempo, perhatikan baik-baik, lalu pecahkan.',
+    description: 'Asah otak santai sambil nikmatin kopi.',
   },
   {
     value: 'strategy',
     label: 'Strategi',
-    description: 'Papan kecil, langkah yang matang.',
+    description: 'Papan simpel, adu taktik matang.',
   },
 ]
 
@@ -45,7 +45,7 @@ export const games: Game[] = [
     slug: 'snake',
     title: 'Snake',
     description:
-      'Pandu garis yang terus memanjang di atas grid, ambil apa yang bisa diambil, dan jangan menabrak dirimu sendiri.',
+      'Klasik ular rakus. Lahap apel, kejar buah bonus emas, dan awas jangan sampai gigit ekor sendiri!',
     category: 'arcade',
     featured: true,
     releaseDate: '2026-11-01',
@@ -58,7 +58,7 @@ export const games: Game[] = [
     slug: 'sudoku',
     title: 'Sudoku',
     description:
-      'Duduk tenang dengan grid sembilan kali sembilan, lalu isi setiap baris, kolom, dan kotak dengan angka satu sampai sembilan.',
+      'Asah otak tanpa ribet. Masukin angka 1–9, pantang ada yang kembar di satu baris atau kotak!',
     category: 'puzzle',
     featured: true,
     releaseDate: '2026-10-28',
@@ -71,7 +71,7 @@ export const games: Game[] = [
     slug: 'tic-tac-toe',
     title: 'Tic-Tac-Toe',
     description:
-      'Duel tiga sejajar yang cepat di atas grid sederhana. Mudah dipelajari, sulit ditinggalkan.',
+      'Adu taktik 3 sejajar bareng kawan atau bot. Klasik, cepet, dan nagih!',
     category: 'strategy',
     featured: false,
     releaseDate: '2026-10-20',
@@ -96,7 +96,7 @@ export function getCategoryDescription(category: GameCategory): string {
 }
 
 export function getGameStatusLabel(status: GameStatus): string {
-  return status === 'playable' ? 'Main' : 'Segera'
+  return status === 'playable' ? 'Gas Main' : 'Segera Hadir'
 }
 
 export function getGameBySlug(slug: string | undefined): Game | undefined {

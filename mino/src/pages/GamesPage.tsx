@@ -38,12 +38,12 @@ export function GamesPage({ category: routeCategory }: GamesPageProps) {
 
   const title =
     activeCategory === 'all'
-      ? 'Semua game'
+      ? 'Koleksi Game'
       : `Game ${getCategoryLabel(activeCategory)}`
 
   const description =
     activeCategory === 'all'
-      ? 'Semua game dalam koleksi, di satu tempat.'
+      ? 'Semua mini game Mino yang siap lo mainin langsung di browser.'
       : getCategoryDescription(activeCategory)
 
   const handleCategoryChange = (value: CategoryFilterValue) => {
@@ -92,8 +92,8 @@ export function GamesPage({ category: routeCategory }: GamesPageProps) {
         ) : (
           <EmptyState
             title="Game tidak ditemukan"
-            description="Belum ada yang cocok dengan pencarian itu. Coba kata lain atau atur ulang filter."
-            actionLabel="Hapus filter"
+            description="Belum ada game yang cocok sama pencarian lo. Coba kata lain atau reset filter."
+            actionLabel="Reset filter"
             onAction={handleClearFilters}
           />
         )}

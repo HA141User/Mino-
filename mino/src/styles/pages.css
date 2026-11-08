@@ -1,5 +1,24 @@
 .hero {
-  padding-block: clamp(3rem, 7vw, 5.5rem) clamp(2rem, 4vw, 3.5rem);
+  padding-block: clamp(2.5rem, 5.5vw, 4.5rem) clamp(2rem, 4vw, 3.5rem);
+}
+
+.hero__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+@media (min-width: 900px) {
+  .hero__grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.95fr);
+    gap: var(--space-10);
+  }
+}
+
+.hero__content {
+  display: flex;
+  flex-direction: column;
 }
 
 .hero__eyebrow,
@@ -28,19 +47,22 @@
 }
 
 .hero__title {
-  max-width: 13ch;
+  max-width: 15ch;
+  font-size: clamp(2.25rem, 4.5vw, 3.25rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
 }
 
 .hero__lede {
-  max-width: 36ch;
-  margin-top: var(--space-5);
+  max-width: 42ch;
+  margin-top: var(--space-4);
   color: var(--color-muted);
-  font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+  font-size: clamp(1rem, 1.25vw, 1.125rem);
   line-height: 1.55;
 }
 
 .hero__search {
-  max-width: 460px;
+  max-width: 440px;
   margin-top: var(--space-6);
 }
 
@@ -49,16 +71,135 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-6);
+  margin-top: var(--space-5);
   color: var(--color-muted);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .hero__footnote span {
-  opacity: 0.5;
+  opacity: 0.8;
+}
+
+/* Spotlight Card (Game Pilihan di Hero) */
+.hero__spotlight {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.hero__spotlight-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--color-ink) 5%, transparent);
+  transition:
+    border-color var(--transition-normal) ease,
+    transform var(--transition-normal) ease,
+    box-shadow var(--transition-normal) ease;
+}
+
+.hero__spotlight-card:hover {
+  border-color: color-mix(in srgb, var(--color-ink) 28%, var(--color-border));
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-ink) 8%, transparent);
+}
+
+.hero__spotlight-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--space-4);
+  background: color-mix(in srgb, var(--color-paper) 75%, transparent);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.hero__spotlight-badge {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #a44228;
+}
+
+.hero__spotlight-record {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: color-mix(in srgb, var(--color-sage) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
+  border-radius: 4px;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.hero__spotlight-tag {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+}
+
+.hero__spotlight-art {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--color-surface);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.hero__spotlight-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.hero__spotlight-title {
+  margin: 0 0 var(--space-1);
+  color: var(--color-ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.hero__spotlight-desc {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.hero__spotlight-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 11px 18px;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border-radius: var(--radius-control);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+  transition:
+    background var(--transition-fast) ease,
+    transform var(--transition-fast) ease;
+}
+
+.hero__spotlight-btn:hover {
+  background: color-mix(in srgb, var(--color-ink) 85%, transparent);
+  transform: translateY(-1px);
 }
 
 .catalog {
