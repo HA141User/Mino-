@@ -48,10 +48,9 @@ export function AboutPage() {
 
         <h2>Kondisinya sekarang</h2>
         <p>
-          Snake, Sudoku, dan Tic-Tac-Toe sedang disiapkan. Katalog disiapkan
-          lebih dulu agar setiap game punya rumah yang layak saat dibuka.
-          Sementara itu, kamu bisa melihat-lihat dan menunggu apa yang akan
-          datang.
+          Snake sudah bisa dimainkan, sementara Sudoku dan Tic-Tac-Toe sedang
+          disiapkan. Katalog dibangun lebih dulu agar setiap game punya tempat
+          yang rapi saat dibuka.
         </p>
 
         <Link to="/games" className="button">

@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { ArrowRight, Trophy } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CategoryFilter } from '../components/CategoryFilter'
 import { EmptyState } from '../components/EmptyState'
-import { GameArt } from '../components/GameArt'
 import { GameGrid } from '../components/GameGrid'
 import { SearchBar } from '../components/SearchBar'
 import { SectionHeading } from '../components/SectionHeading'
@@ -37,71 +36,38 @@ export function HomePage() {
   } = useGameCatalog(games)
 
   const [bestScore] = useState(readBestScore)
-  const featuredGame = games.find((game) => game.id === 'snake') ?? games[0]
+  const playableGame = games.find((game) => game.status === 'playable')
 
   return (
     <>
       <section className="hero container">
-        <div className="hero__grid">
-          <div className="hero__content">
-            <p className="hero__eyebrow">Arkade Santai No-Ribet</p>
-            <h1 className="hero__title">Rehat bentar, gas push high score.</h1>
-            <p className="hero__lede">
-              Koleksi mini game retro yang ringan, tanpa iklan, dan langsung
-              tancap gas di peramban lo.
-            </p>
-            <div className="hero__search">
-              <SearchBar
-                value={search}
-                onChange={setSearch}
-                placeholder="Cari game (Snake, Sudoku, dll)..."
-              />
-            </div>
-            <p className="hero__footnote">
-              <span> Langsung Main</span>
-              <span aria-hidden="true">·</span>
-              <span> Tanpa Login</span>
-              <span aria-hidden="true">·</span>
-              <span> Gratis</span>
-            </p>
+        <div className="hero__content">
+          <p className="hero__eyebrow">Portal game ringan</p>
+          <h1 className="hero__title">Santai sejenak, langsung main.</h1>
+          <p className="hero__lede">
+            Koleksi game web sederhana tanpa iklan, tanpa akun, dan siap
+            dimainkan langsung di peramban.
+          </p>
+          <div className="hero__search">
+            <SearchBar
+              value={search}
+              onChange={setSearch}
+              placeholder="Cari game (Snake, Sudoku, Tic-Tac-Toe)..."
+            />
           </div>
-
-          <div className="hero__spotlight">
-            <div className="hero__spotlight-card">
-              <div className="hero__spotlight-header">
-                <span className="hero__spotlight-badge"> Game Pilihan</span>
-                {bestScore > 0 ? (
-                  <span className="hero__spotlight-record">
-                    <Trophy size={13} aria-hidden="true" />
-                    <span>Rekor: {bestScore} pts</span>
-                  </span>
-                ) : (
-                  <span className="hero__spotlight-tag">Retro Arkade</span>
-                )}
-              </div>
-
-              <div className="hero__spotlight-art">
-                <GameArt game={featuredGame} />
-              </div>
-
-              <div className="hero__spotlight-body">
-                <div>
-                  <h2 className="hero__spotlight-title">{featuredGame.title}</h2>
-                  <p className="hero__spotlight-desc">
-                    {featuredGame.description}
-                  </p>
-                </div>
-
-                <Link
-                  to={featuredGame.path}
-                  className="button hero__spotlight-btn"
-                >
-                  <span>Gas Main Sekarang</span>
-                  <ArrowRight size={16} aria-hidden="true" />
-                </Link>
-              </div>
+          {playableGame ? (
+            <div className="hero__quick">
+              <Link to={playableGame.path} className="hero__quick-link">
+                <span>Langsung main: {playableGame.title}</span>
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+              {bestScore > 0 ? (
+                <span className="hero__quick-record">
+                  Rekor terbaik: {bestScore}
+                </span>
+              ) : null}
             </div>
-          </div>
+          ) : null}
         </div>
       </section>
 
@@ -113,7 +79,7 @@ export function HomePage() {
         <SectionHeading
           id="catalog-title"
           title="Koleksi Game"
-          description="Pilih game favorit lo dan mulai tanding."
+          description="Pilih game yang ingin kamu mainkan."
         />
 
         <div className="catalog__controls">

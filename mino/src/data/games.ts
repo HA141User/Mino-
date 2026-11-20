@@ -25,17 +25,17 @@ export const categoryMeta: {
   {
     value: 'arcade',
     label: 'Arkade',
-    description: 'Refleks kilat buat jeda santai. Langsung tancap gas!',
+    description: 'Refleks cepat untuk jeda singkat.',
   },
   {
     value: 'puzzle',
     label: 'Teka-teki',
-    description: 'Asah otak santai sambil nikmatin kopi.',
+    description: 'Latihan logika yang tenang dan terukur.',
   },
   {
     value: 'strategy',
     label: 'Strategi',
-    description: 'Papan simpel, adu taktik matang.',
+    description: 'Papan sederhana dengan adu taktik singkat.',
   },
 ]
 
@@ -45,7 +45,7 @@ export const games: Game[] = [
     slug: 'snake',
     title: 'Snake',
     description:
-      'Klasik ular rakus. Lahap apel, kejar buah bonus emas, dan awas jangan sampai gigit ekor sendiri!',
+      'Ular klasik di papan tembus dinding. Kumpulkan makanan dan buah bonus emas tanpa menabrak tubuh sendiri.',
     category: 'arcade',
     featured: true,
     releaseDate: '2026-11-01',
@@ -58,7 +58,7 @@ export const games: Game[] = [
     slug: 'sudoku',
     title: 'Sudoku',
     description:
-      'Asah otak tanpa ribet. Masukin angka 1–9, pantang ada yang kembar di satu baris atau kotak!',
+      'Teka-teki angka 1–9. Isi setiap baris, kolom, dan kotak 3×3 tanpa angka yang berulang.',
     category: 'puzzle',
     featured: true,
     releaseDate: '2026-10-28',
@@ -71,7 +71,7 @@ export const games: Game[] = [
     slug: 'tic-tac-toe',
     title: 'Tic-Tac-Toe',
     description:
-      'Adu taktik 3 sejajar bareng kawan atau bot. Klasik, cepet, dan nagih!',
+      'Tiga simbol sejajar di papan 3×3. Singkat, klasik, dan mudah diulang.',
     category: 'strategy',
     featured: false,
     releaseDate: '2026-10-20',
@@ -96,7 +96,7 @@ export function getCategoryDescription(category: GameCategory): string {
 }
 
 export function getGameStatusLabel(status: GameStatus): string {
-  return status === 'playable' ? 'Gas Main' : 'Segera Hadir'
+  return status === 'playable' ? 'Siap dimainkan' : 'Segera hadir'
 }
 
 export function getGameBySlug(slug: string | undefined): Game | undefined {

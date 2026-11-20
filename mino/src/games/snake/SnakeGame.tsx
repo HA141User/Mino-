@@ -1034,11 +1034,11 @@ export function SnakeGame() {
             </li>
             <li>
               <span className="snake-keys">
-                <kbd>Gesek</kbd>
+                <span className="snake-controls__touch">Gesek</span>
               </span>
               <span>atau</span>
               <span className="snake-keys">
-                <kbd>D-Pad</kbd>
+                <span className="snake-controls__touch">D-Pad</span>
               </span>
               <span className="snake-controls__desc">kontrol layar sentuh</span>
             </li>

@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { GameArt } from '../components/GameArt'
 import type { Game } from '../data/games'
 
@@ -11,14 +13,13 @@ export function GamePlaceholder({ game }: { game: Game }) {
         <p className="game-stage__eyebrow">Sedang disiapkan</p>
         <h2 id="game-status-title">Segera bisa dimainkan.</h2>
         <p className="game-stage__text">
-          {game.title} sedang dibuat dengan teliti seperti bagian lain Mino. Ini
-          yang bisa kamu harapkan saat game ini dibuka.
+          {game.title} sedang dikerjakan dengan antarmuka papan yang ringkas,
+          dukungan keyboard dan layar sentuh, serta penyimpanan skor lokal.
         </p>
-        <ul className="game-stage__list">
-          <li>Kontrol papan ketik dan sentuh</li>
-          <li>Skor, penghitung waktu, dan mulai ulang cepat</li>
-          <li>Tanpa akun</li>
-        </ul>
+        <Link to="/games" className="button button--quiet">
+          <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
+          <span>Kembali ke katalog</span>
+        </Link>
       </aside>
     </div>
   )

@@ -43,7 +43,7 @@ export function GamesPage({ category: routeCategory }: GamesPageProps) {
 
   const description =
     activeCategory === 'all'
-      ? 'Semua mini game Mino yang siap lo mainin langsung di browser.'
+      ? 'Semua game Mino yang bisa langsung kamu mainkan di peramban.'
       : getCategoryDescription(activeCategory)
 
   const handleCategoryChange = (value: CategoryFilterValue) => {
@@ -92,7 +92,7 @@ export function GamesPage({ category: routeCategory }: GamesPageProps) {
         ) : (
           <EmptyState
             title="Game tidak ditemukan"
-            description="Belum ada game yang cocok sama pencarian lo. Coba kata lain atau reset filter."
+            description="Belum ada game yang cocok dengan pencarian itu. Coba kata lain atau reset filter."
             actionLabel="Reset filter"
             onAction={handleClearFilters}
           />
