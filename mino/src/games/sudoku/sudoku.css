@@ -1,0 +1,679 @@
+.sudoku-game {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.sudoku-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.sudoku-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(270px, 0.85fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+
+.sudoku-board-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sudoku-board-frame {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin-inline: auto;
+  aspect-ratio: 1;
+  background: var(--color-surface);
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.sudoku-board-frame--won {
+  border-color: color-mix(in srgb, var(--color-ink) 80%, var(--color-sage));
+}
+
+.sudoku-board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sudoku-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  background: var(--color-surface);
+  color: #2f4d63;
+  transition: background-color var(--transition-fast) ease;
+}
+
+.sudoku-cell:nth-child(9n) {
+  border-right: 0;
+}
+
+.sudoku-cell:nth-child(n + 73) {
+  border-bottom: 0;
+}
+
+.sudoku-cell--box-right {
+  border-right: 2px solid color-mix(in srgb, var(--color-ink) 55%, var(--color-border));
+}
+
+.sudoku-cell--box-bottom {
+  border-bottom: 2px solid color-mix(in srgb, var(--color-ink) 55%, var(--color-border));
+}
+
+.sudoku-cell--given {
+  background: color-mix(in srgb, var(--color-paper) 78%, var(--color-surface));
+  color: var(--color-ink);
+}
+
+.sudoku-cell--peer {
+  background: color-mix(in srgb, var(--color-clay) 32%, var(--color-surface));
+}
+
+.sudoku-cell--same {
+  background: color-mix(in srgb, var(--color-gold) 38%, var(--color-surface));
+}
+
+.sudoku-cell--hint-related {
+  background: color-mix(in srgb, var(--color-sage) 48%, var(--color-surface));
+}
+
+.sudoku-cell--selected {
+  background: color-mix(in srgb, var(--color-clay) 72%, var(--color-surface));
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+  z-index: 2;
+}
+
+.sudoku-cell--conflict {
+  background: #f6dad4;
+  color: #9e2a1f;
+}
+
+.sudoku-cell--conflict.sudoku-cell--selected {
+  background: #f2c8be;
+  box-shadow: inset 0 0 0 2px #9e2a1f;
+}
+
+.sudoku-cell--hint-target {
+  box-shadow: inset 0 0 0 2px #4c6b3c;
+  z-index: 3;
+}
+
+.sudoku-cell:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: -3px;
+  z-index: 4;
+}
+
+.sudoku-cell:disabled {
+  cursor: default;
+}
+
+.sudoku-cell__value {
+  font-family: var(--font-sans);
+  font-size: clamp(1.15rem, 2.8vw, 1.65rem);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.sudoku-cell--given .sudoku-cell__value {
+  font-weight: 700;
+}
+
+.sudoku-cell--same .sudoku-cell__value {
+  font-weight: 700;
+}
+
+.sudoku-cell__notes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 90%;
+  height: 90%;
+  place-items: center;
+}
+
+.sudoku-cell__note {
+  font-family: var(--font-mono);
+  font-size: clamp(0.52rem, 1.05vw, 0.7rem);
+  line-height: 1;
+  color: var(--color-muted);
+}
+
+.sudoku-cell__note--match {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.sudoku-cell__conflict-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9e2a1f;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sudoku-cell--hint-target {
+    animation: sudoku-hint-pulse 1100ms ease-in-out infinite alternate;
+  }
+
+  @keyframes sudoku-hint-pulse {
+    from {
+      box-shadow: inset 0 0 0 2px #4c6b3c;
+    }
+    to {
+      box-shadow: inset 0 0 0 3px var(--color-ink);
+    }
+  }
+}
+
+/* Overlays */
+.sudoku-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  background: color-mix(in srgb, var(--color-paper) 94%, transparent);
+}
+
+.sudoku-overlay__eyebrow {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sudoku-overlay__title {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+}
+
+.sudoku-overlay__text {
+  max-width: 38ch;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.sudoku-overlay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* Banner Petunjuk Logika */
+.sudoku-hint-banner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 560px;
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-4);
+  background: color-mix(in srgb, var(--color-sage) 45%, var(--color-surface));
+  border: var(--border-width) solid color-mix(in srgb, var(--color-ink) 20%, var(--color-border));
+  border-radius: var(--radius-card);
+}
+
+.sudoku-hint-banner--conflict,
+.sudoku-hint-banner--incorrect {
+  background: color-mix(in srgb, #f6dad4 70%, var(--color-surface));
+  border-color: color-mix(in srgb, #9e2a1f 30%, var(--color-border));
+}
+
+.sudoku-hint-banner--pointing-pair,
+.sudoku-hint-banner--naked-pair {
+  background: color-mix(in srgb, var(--color-blue-gray) 65%, var(--color-surface));
+  border-color: color-mix(in srgb, #2f4d63 28%, var(--color-border));
+}
+
+.sudoku-hint-banner__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: var(--border-width) solid var(--color-border);
+}
+
+.sudoku-hint-banner__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sudoku-hint-banner__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.sudoku-hint-banner__text {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-ink-soft);
+}
+
+.sudoku-hint-banner__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.sudoku-hint-banner__close:hover {
+  background: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  color: var(--color-ink);
+}
+
+/* Panel Samping */
+.sudoku-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.sudoku-panel__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sudoku-difficulty {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  flex: 1;
+  gap: 3px;
+  padding: 3px;
+  background: var(--color-paper);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.sudoku-difficulty__btn {
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast) ease,
+    color var(--transition-fast) ease;
+}
+
+.sudoku-difficulty__btn:hover {
+  color: var(--color-ink);
+}
+
+.sudoku-difficulty__btn--active {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(40, 41, 35, 0.08);
+}
+
+.sudoku-difficulty__btn--extreme.sudoku-difficulty__btn--active {
+  color: #9e2a1f;
+}
+
+.sudoku-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  transition: background-color var(--transition-fast) ease,
+    border-color var(--transition-fast) ease;
+}
+
+.sudoku-icon-btn:hover {
+  background: var(--color-clay);
+  border-color: var(--color-ink);
+}
+
+.sudoku-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.sudoku-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  background: var(--color-paper);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.sudoku-stat__label {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.sudoku-stat__value {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1.2;
+}
+
+.sudoku-substats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  padding-inline: 2px;
+}
+
+.sudoku-substats strong {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+/* Numpad */
+.sudoku-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.sudoku-numpad__btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 6px;
+  background: var(--color-paper);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-ink);
+  transition: background-color var(--transition-fast) ease,
+    border-color var(--transition-fast) ease,
+    transform var(--transition-fast) ease;
+}
+
+.sudoku-numpad__btn:hover:not(:disabled) {
+  background: var(--color-clay);
+  border-color: var(--color-ink);
+}
+
+.sudoku-numpad__btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.sudoku-numpad__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sudoku-numpad__btn--done {
+  opacity: 0.45;
+  background: transparent;
+}
+
+.sudoku-numpad__btn--note {
+  border-style: dashed;
+}
+
+.sudoku-numpad__digit {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.sudoku-numpad__rem {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* Alat bantu */
+.sudoku-tools {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.sudoku-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 10px;
+  background: var(--color-paper);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-ink);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background-color var(--transition-fast) ease,
+    border-color var(--transition-fast) ease;
+}
+
+.sudoku-tool-btn:hover:not(:disabled) {
+  background: var(--color-clay);
+  border-color: var(--color-ink);
+}
+
+.sudoku-tool-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sudoku-tool-btn--active {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border-color: var(--color-ink);
+}
+
+.sudoku-tool-btn--active:hover:not(:disabled) {
+  background: var(--color-ink-soft);
+  color: var(--color-paper);
+}
+
+.sudoku-tool-btn--hint:hover:not(:disabled) {
+  background: var(--color-sage);
+}
+
+/* Aksi sesi */
+.sudoku-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.sudoku-actions__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.sudoku-actions__btn--full {
+  grid-column: 1 / -1;
+}
+
+/* Mobile Compact HUD */
+.sudoku-mobile-hud {
+  display: none;
+}
+
+/* Panduan bawah (Split Context) */
+.sudoku-guide {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.sudoku-guide__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.sudoku-guide__title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.sudoku-guide__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.sudoku-guide__list kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: 4px;
+}
+
+@media (max-width: 900px) {
+  .sudoku-mobile-hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-card);
+  }
+
+  .sudoku-mobile-hud__item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .sudoku-mobile-hud__label {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .sudoku-mobile-hud__value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+
+  .sudoku-stage {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .sudoku-panel__mute {
+    display: none;
+  }
+
+  .sudoku-numpad {
+    grid-template-columns: repeat(9, 1fr);
+    gap: 4px;
+  }
+
+  .sudoku-numpad__btn {
+    min-height: 48px;
+    padding: 4px 2px;
+  }
+
+  .sudoku-numpad__digit {
+    font-size: 1.05rem;
+  }
+
+  .sudoku-guide {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 400px) {
+  .sudoku-difficulty {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sudoku-cell,
+  .sudoku-difficulty__btn,
+  .sudoku-icon-btn,
+  .sudoku-numpad__btn,
+  .sudoku-tool-btn {
+    transition: none;
+  }
+}

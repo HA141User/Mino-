@@ -61,9 +61,9 @@ export const games: Game[] = [
       'Teka-teki angka 1–9. Isi setiap baris, kolom, dan kotak 3×3 tanpa angka yang berulang.',
     category: 'puzzle',
     featured: true,
-    releaseDate: '2026-10-28',
+    releaseDate: '2026-11-24',
     thumbnail: 'sudoku',
-    status: 'coming-soon',
+    status: 'playable',
     path: '/games/sudoku',
   },
   {

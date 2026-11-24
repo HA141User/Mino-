@@ -6,4 +6,9 @@ export const gameRegistry = {
       default: module.SnakeGame,
     })),
   ),
+  sudoku: lazy(() =>
+    import('./sudoku/SudokuGame').then((module) => ({
+      default: module.SudokuGame,
+    })),
+  ),
 }
