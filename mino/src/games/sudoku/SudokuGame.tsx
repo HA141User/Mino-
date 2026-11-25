@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  ChevronDown,
   Eraser,
   Lightbulb,
   Pause,
   Pencil,
   Play,
-  RotateCcw,
   RefreshCw,
+  RotateCcw,
   Undo2,
   Volume2,
   VolumeX,
@@ -488,33 +489,79 @@ export function SudokuGame() {
         {announcement}
       </p>
 
-      {/* Mobile Compact HUD */}
-      <div className="sudoku-mobile-hud" aria-label="Ringkasan status Sudoku">
-        <div className="sudoku-mobile-hud__item">
-          <span className="sudoku-mobile-hud__label">Mode</span>
-          <span className="sudoku-mobile-hud__value">{difficultyMeta.label}</span>
+      {/* Top Bar Editorial: Mode di kiri, status & utilitas di kanan */}
+      <div className="sudoku-topbar">
+        <div
+          className="sudoku-tabs"
+          role="group"
+          aria-label="Tingkat kesulitan"
+        >
+          {DIFFICULTIES.map((diff) => {
+            const active = state.difficulty === diff.id
+            const isExtreme = diff.id === 'extreme'
+            return (
+              <button
+                key={diff.id}
+                type="button"
+                className={`sudoku-tabs__btn${active ? ' sudoku-tabs__btn--active' : ''}${isExtreme ? ' sudoku-tabs__btn--extreme' : ''}`}
+                aria-pressed={active}
+                onClick={() => {
+                  unlockAudio()
+                  if (diff.id !== state.difficulty) {
+                    dispatch({ type: 'new-game', difficulty: diff.id })
+                    setAnnouncement(`Mode diganti ke ${diff.label}.`)
+                  }
+                }}
+              >
+                {diff.label}
+              </button>
+            )
+          })}
         </div>
-        <div className="sudoku-mobile-hud__item">
-          <span className="sudoku-mobile-hud__label">Waktu</span>
-          <span className="sudoku-mobile-hud__value sudoku-mono">
+
+        <div className="sudoku-telemetry" aria-label="Status sesi Sudoku">
+          <span
+            className="sudoku-telemetry__time sudoku-mono"
+            aria-label={`Waktu ${formatTime(state.elapsedSeconds)}`}
+          >
             {formatTime(state.elapsedSeconds)}
           </span>
-        </div>
-        <div className="sudoku-mobile-hud__item">
-          <span className="sudoku-mobile-hud__label">Terisi</span>
-          <span className="sudoku-mobile-hud__value sudoku-mono">
+          <span className="sudoku-telemetry__sep" aria-hidden="true">
+            /
+          </span>
+          <span
+            className="sudoku-telemetry__progress sudoku-mono"
+            aria-label={`Terisi ${filledCount} dari ${CELL_COUNT} sel`}
+          >
             {filledCount}/{CELL_COUNT}
           </span>
+
+          <div className="sudoku-telemetry__actions">
+            <button
+              type="button"
+              className="sudoku-ghost-icon"
+              onClick={() => {
+                unlockAudio()
+                dispatch({ type: 'toggle-pause' })
+              }}
+              disabled={isWon}
+              aria-label={isPaused ? 'Lanjutkan permainan' : 'Jeda permainan'}
+              title={isPaused ? 'Lanjutkan (Spasi)' : 'Jeda (Spasi)'}
+            >
+              {isPaused ? <Play size={15} /> : <Pause size={15} />}
+            </button>
+            <button
+              type="button"
+              className="sudoku-ghost-icon"
+              onClick={handleToggleMute}
+              aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'}
+              aria-pressed={muted}
+              title={muted ? 'Nyalakan suara' : 'Bisukan suara'}
+            >
+              {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          className="sudoku-icon-btn"
-          onClick={handleToggleMute}
-          aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'}
-          aria-pressed={muted}
-        >
-          {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-        </button>
       </div>
 
       <div className="sudoku-stage">
@@ -625,7 +672,11 @@ export function SudokuGame() {
             </div>
 
             {isPaused ? (
-              <div className="sudoku-overlay" role="dialog" aria-label="Permainan dijeda">
+              <div
+                className="sudoku-overlay"
+                role="dialog"
+                aria-label="Permainan dijeda"
+              >
                 <p className="sudoku-overlay__eyebrow">Jeda</p>
                 <h2 className="sudoku-overlay__title">Istirahat sebentar.</h2>
                 <p className="sudoku-overlay__text">
@@ -687,108 +738,89 @@ export function SudokuGame() {
             ) : null}
           </div>
 
-          {/* Banner Petunjuk Logika */}
+          {/* Catatan Petunjuk Logika (gaya editorial marginalia) */}
           {state.activeHint ? (
             <div
-              className={`sudoku-hint-banner sudoku-hint-banner--${state.activeHint.kind}`}
+              className={`sudoku-hint-note sudoku-hint-note--${state.activeHint.kind}`}
               role="status"
               aria-live="polite"
             >
-              <div className="sudoku-hint-banner__icon" aria-hidden="true">
-                <Lightbulb size={18} />
-              </div>
-              <div className="sudoku-hint-banner__body">
-                <p className="sudoku-hint-banner__title">
+              <div className="sudoku-hint-note__body">
+                <p className="sudoku-hint-note__title">
                   {state.activeHint.title}
                 </p>
-                <p className="sudoku-hint-banner__text">
+                <p className="sudoku-hint-note__text">
                   {state.activeHint.message}
                 </p>
               </div>
               <button
                 type="button"
-                className="sudoku-hint-banner__close"
+                className="sudoku-hint-note__close"
                 aria-label="Tutup petunjuk"
                 onClick={() => dispatch({ type: 'clear-hint' })}
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
           ) : null}
         </div>
 
-        {/* Panel Samping (HUD + Numpad + Kontrol) */}
-        <aside className="sudoku-panel" aria-label="Kontrol dan status Sudoku">
-          <div className="sudoku-panel__top">
-            <div
-              className="sudoku-difficulty"
-              role="group"
-              aria-label="Tingkat kesulitan"
+        {/* Kolom Kontrol Kanan — Langsung di atas kertas, tanpa kartu pembungkus */}
+        <aside className="sudoku-controls" aria-label="Kontrol permainan Sudoku">
+          {/* Alat Bantu 1 Baris */}
+          <div className="sudoku-tools" role="group" aria-label="Alat bantu papan">
+            <button
+              type="button"
+              className="sudoku-tool-btn"
+              onClick={handleUndo}
+              disabled={state.status !== 'playing' || state.history.length === 0}
+              title="Batalkan langkah terakhir (Z)"
             >
-              {DIFFICULTIES.map((diff) => {
-                const active = state.difficulty === diff.id
-                const isExtreme = diff.id === 'extreme'
-                return (
-                  <button
-                    key={diff.id}
-                    type="button"
-                    className={`sudoku-difficulty__btn${active ? ' sudoku-difficulty__btn--active' : ''}${isExtreme ? ' sudoku-difficulty__btn--extreme' : ''}`}
-                    aria-pressed={active}
-                    onClick={() => {
-                      unlockAudio()
-                      if (diff.id !== state.difficulty) {
-                        dispatch({ type: 'new-game', difficulty: diff.id })
-                        setAnnouncement(`Mode diganti ke ${diff.label}.`)
-                      }
-                    }}
-                  >
-                    {diff.label}
-                  </button>
-                )
-              })}
-            </div>
+              <Undo2 size={17} aria-hidden="true" />
+              <span>Undo</span>
+            </button>
 
             <button
               type="button"
-              className="sudoku-icon-btn sudoku-panel__mute"
-              onClick={handleToggleMute}
-              aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'}
-              aria-pressed={muted}
-              title={muted ? 'Nyalakan suara' : 'Bisukan suara'}
+              className="sudoku-tool-btn"
+              onClick={handleErase}
+              disabled={!canEditSelected}
+              title="Hapus sel terpilih (Backspace)"
             >
-              {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              <Eraser size={17} aria-hidden="true" />
+              <span>Hapus</span>
+            </button>
+
+            <button
+              type="button"
+              className={`sudoku-tool-btn${state.noteMode ? ' sudoku-tool-btn--active' : ''}`}
+              aria-pressed={state.noteMode}
+              onClick={handleToggleNote}
+              disabled={state.status !== 'playing'}
+              title="Toggle mode catatan kandidat (N)"
+            >
+              <Pencil size={17} aria-hidden="true" />
+              <span>{state.noteMode ? 'Catatan · ON' : 'Catatan'}</span>
+            </button>
+
+            <button
+              type="button"
+              className="sudoku-tool-btn sudoku-tool-btn--hint"
+              onClick={handleHint}
+              disabled={state.status !== 'playing'}
+              title="Petunjuk logika langkah berikutnya (H)"
+            >
+              <Lightbulb size={17} aria-hidden="true" />
+              <span>Petunjuk</span>
             </button>
           </div>
 
-          <div className="sudoku-stats">
-            <div className="sudoku-stat">
-              <span className="sudoku-stat__label">Waktu</span>
-              <span className="sudoku-stat__value sudoku-mono">
-                {formatTime(state.elapsedSeconds)}
-              </span>
-            </div>
-            <div className="sudoku-stat">
-              <span className="sudoku-stat__label">Terbaik</span>
-              <span className="sudoku-stat__value sudoku-mono">
-                {state.bestTime !== null ? formatTime(state.bestTime) : '—'}
-              </span>
-            </div>
-          </div>
-
-          <div className="sudoku-substats">
-            <span>
-              Terisi{' '}
-              <strong className="sudoku-mono">
-                {filledCount}/{CELL_COUNT}
-              </strong>
-            </span>
-            <span>
-              Petunjuk <strong className="sudoku-mono">{state.hintsUsed}</strong>
-            </span>
-          </div>
-
           {/* Numpad 1-9 */}
-          <div className="sudoku-numpad" role="group" aria-label="Papan angka 1 sampai 9">
+          <div
+            className="sudoku-numpad"
+            role="group"
+            aria-label="Papan angka 1 sampai 9"
+          >
             {DIGITS.map((digit) => {
               const count = digitCounts[digit]
               const remaining = Math.max(0, 9 - count)
@@ -815,77 +847,37 @@ export function SudokuGame() {
             })}
           </div>
 
-          {/* Alat Bantu Utama */}
-          <div className="sudoku-tools" role="group" aria-label="Alat bantu papan">
-            <button
-              type="button"
-              className="sudoku-tool-btn"
-              onClick={handleUndo}
-              disabled={state.status !== 'playing' || state.history.length === 0}
-            >
-              <Undo2 size={16} aria-hidden="true" />
-              <span>Undo</span>
-            </button>
-
-            <button
-              type="button"
-              className="sudoku-tool-btn"
-              onClick={handleErase}
-              disabled={!canEditSelected}
-            >
-              <Eraser size={16} aria-hidden="true" />
-              <span>Hapus</span>
-            </button>
-
-            <button
-              type="button"
-              className={`sudoku-tool-btn${state.noteMode ? ' sudoku-tool-btn--active' : ''}`}
-              aria-pressed={state.noteMode}
-              onClick={handleToggleNote}
-              disabled={state.status !== 'playing'}
-            >
-              <Pencil size={16} aria-hidden="true" />
-              <span>Catatan {state.noteMode ? 'ON' : 'OFF'}</span>
-            </button>
-
-            <button
-              type="button"
-              className="sudoku-tool-btn sudoku-tool-btn--hint"
-              onClick={handleHint}
-              disabled={state.status !== 'playing'}
-            >
-              <Lightbulb size={16} aria-hidden="true" />
-              <span>Petunjuk</span>
-            </button>
+          {/* Meta Ringkas */}
+          <div className="sudoku-meta">
+            <span>
+              Terbaik{' '}
+              <strong className="sudoku-mono">
+                {state.bestTime !== null ? formatTime(state.bestTime) : '—'}
+              </strong>
+            </span>
+            <span>
+              Petunjuk <strong className="sudoku-mono">{state.hintsUsed}</strong>
+            </span>
           </div>
 
-          {/* Aksi Sesi */}
-          <div className="sudoku-actions">
+          {/* Aksi Sesi Ringkas */}
+          <div className="sudoku-session">
             <button
               type="button"
-              className="button button--quiet sudoku-actions__btn"
+              className="button sudoku-session__primary"
               onClick={() => {
                 unlockAudio()
-                dispatch({ type: 'toggle-pause' })
+                dispatch({ type: 'new-game' })
+                setAnnouncement(`Papan baru mode ${difficultyMeta.label} dimulai.`)
               }}
-              disabled={isWon}
             >
-              {isPaused ? (
-                <>
-                  <Play size={15} aria-hidden="true" />
-                  Lanjut
-                </>
-              ) : (
-                <>
-                  <Pause size={15} aria-hidden="true" />
-                  Jeda
-                </>
-              )}
+              <RefreshCw size={15} aria-hidden="true" />
+              Papan baru
             </button>
 
             <button
               type="button"
-              className="button button--quiet sudoku-actions__btn"
+              className="sudoku-session__reset"
               onClick={() => {
                 unlockAudio()
                 dispatch({ type: 'reset-board' })
@@ -896,66 +888,52 @@ export function SudokuGame() {
               <RotateCcw size={15} aria-hidden="true" />
               Ulangi
             </button>
-
-            <button
-              type="button"
-              className="button sudoku-actions__btn sudoku-actions__btn--full"
-              onClick={() => {
-                unlockAudio()
-                dispatch({ type: 'new-game' })
-                setAnnouncement(`Papan baru mode ${difficultyMeta.label} dimulai.`)
-              }}
-            >
-              <RefreshCw size={15} aria-hidden="true" />
-              Papan baru
-            </button>
           </div>
         </aside>
       </div>
 
-      {/* Panduan Bawah (Split Context) */}
-      <section
-        id="sudoku-instructions"
-        className="sudoku-guide"
-        aria-label="Panduan bermain Sudoku"
-      >
-        <div className="sudoku-guide__card">
-          <h2 className="sudoku-guide__title">Kontrol permainan</h2>
-          <ul className="sudoku-guide__list">
-            <li>
-              <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> atau{' '}
-              <kbd>WASD</kbd> — pindah sel (bisa pilih angka bawaan untuk sorot angka sama)
-            </li>
-            <li>
-              <kbd>1</kbd>–<kbd>9</kbd> — isi angka atau catatan ·{' '}
-              <kbd>Backspace</kbd> — hapus sel
-            </li>
-            <li>
-              <kbd>N</kbd> — toggle mode Catatan · <kbd>Z</kbd> — Undo ·{' '}
-              <kbd>H</kbd> — Petunjuk · <kbd>Spasi</kbd> — Jeda
-            </li>
-          </ul>
+      {/* Panduan Terlipat (Disclosure) — Bersih secara default */}
+      <details id="sudoku-instructions" className="sudoku-disclosure">
+        <summary className="sudoku-disclosure__summary">
+          <span>Cara main &amp; pintasan keyboard</span>
+          <ChevronDown size={16} className="sudoku-disclosure__chevron" aria-hidden="true" />
+        </summary>
+        <div className="sudoku-disclosure__grid">
+          <div>
+            <h2 className="sudoku-disclosure__heading">Kontrol</h2>
+            <ul className="sudoku-disclosure__list">
+              <li>
+                <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> atau{' '}
+                <kbd>WASD</kbd> pindah sel
+              </li>
+              <li>
+                <kbd>1</kbd>–<kbd>9</kbd> isi angka/catatan ·{' '}
+                <kbd>Backspace</kbd> hapus
+              </li>
+              <li>
+                <kbd>N</kbd> Catatan · <kbd>Z</kbd> Undo · <kbd>H</kbd> Petunjuk ·{' '}
+                <kbd>Spasi</kbd> Jeda
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h2 className="sudoku-disclosure__heading">Aturan singkat</h2>
+            <ul className="sudoku-disclosure__list">
+              <li>
+                Isi angka 1–9 tanpa kembar di tiap baris, kolom, dan kotak 3×3.
+              </li>
+              <li>
+                Angka bentrok ditandai merah dan bisa diganti kapan saja.
+              </li>
+              <li>
+                <strong>Petunjuk</strong> memberi arah logika (termasuk{' '}
+                <em>Pointing Pair</em> &amp; <em>Naked Pair</em> di Ekstrem) tanpa
+                membocorkan jawaban.
+              </li>
+            </ul>
+          </div>
         </div>
-
-        <div className="sudoku-guide__card">
-          <h2 className="sudoku-guide__title">Aturan &amp; petunjuk</h2>
-          <ul className="sudoku-guide__list">
-            <li>
-              Isi angka 1–9 sehingga setiap baris, kolom, dan kotak 3×3 tidak
-              memiliki angka ganda.
-            </li>
-            <li>
-              Angka yang bentrok langsung ditandai merah dan bisa diperbaiki
-              kapan saja tanpa batas nyawa.
-            </li>
-            <li>
-              Tombol <strong>Petunjuk</strong> memberi arah logika (termasuk
-              teknik <em>Pointing Pair</em> &amp; <em>Naked Pair</em> di mode
-              Ekstrem) tanpa membocorkan angka jawabannya.
-            </li>
-          </ul>
-        </div>
-      </section>
+      </details>
     </div>
   )
 }

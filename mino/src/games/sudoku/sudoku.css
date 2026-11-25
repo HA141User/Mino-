@@ -1,7 +1,8 @@
 .sudoku-game {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-5);
+  max-width: 920px;
 }
 
 .sudoku-mono {
@@ -9,11 +10,118 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Top Bar Editorial — Tanpa kotak pembungkus, hanya garis tipis */
+.sudoku-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.sudoku-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  margin-bottom: -1px;
+}
+
+.sudoku-tabs__btn {
+  position: relative;
+  padding: 0 0 11px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast) ease,
+    border-color var(--transition-fast) ease;
+}
+
+.sudoku-tabs__btn:hover {
+  color: var(--color-ink);
+}
+
+.sudoku-tabs__btn--active {
+  color: var(--color-ink);
+  font-weight: 600;
+  border-bottom-color: var(--color-ink);
+}
+
+.sudoku-tabs__btn--extreme.sudoku-tabs__btn--active {
+  color: #9e2a1f;
+  border-bottom-color: #9e2a1f;
+}
+
+.sudoku-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 9px;
+}
+
+.sudoku-telemetry__time {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+}
+
+.sudoku-telemetry__sep {
+  color: var(--color-border);
+  font-size: 0.85rem;
+}
+
+.sudoku-telemetry__progress {
+  font-size: 0.82rem;
+  color: var(--color-muted);
+}
+
+.sudoku-telemetry__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--space-2);
+}
+
+.sudoku-ghost-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast) ease,
+    color var(--transition-fast) ease;
+}
+
+.sudoku-ghost-icon:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-ink) 7%, transparent);
+  color: var(--color-ink);
+}
+
+.sudoku-ghost-icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Stage Utama: Papan di kiri, kontrol bersih di kanan */
 .sudoku-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(270px, 0.85fr);
+  grid-template-columns: minmax(0, 520px) minmax(240px, 1fr);
   align-items: start;
-  gap: var(--space-6);
+  gap: var(--space-8);
 }
 
 .sudoku-board-col {
@@ -25,17 +133,15 @@
 .sudoku-board-frame {
   position: relative;
   width: 100%;
-  max-width: 560px;
-  margin-inline: auto;
   aspect-ratio: 1;
   background: var(--color-surface);
   border: 2px solid var(--color-ink);
-  border-radius: var(--radius-card);
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .sudoku-board-frame--won {
-  border-color: color-mix(in srgb, var(--color-ink) 80%, var(--color-sage));
+  border-color: #3e5b34;
 }
 
 .sudoku-board {
@@ -56,11 +162,12 @@
   padding: 0;
   margin: 0;
   border: 0;
-  border-right: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
   background: var(--color-surface);
-  color: #2f4d63;
-  transition: background-color var(--transition-fast) ease;
+  color: #23475c;
+  cursor: pointer;
+  transition: background-color 110ms ease;
 }
 
 .sudoku-cell:nth-child(9n) {
@@ -72,32 +179,32 @@
 }
 
 .sudoku-cell--box-right {
-  border-right: 2px solid color-mix(in srgb, var(--color-ink) 55%, var(--color-border));
+  border-right: 2px solid color-mix(in srgb, var(--color-ink) 78%, transparent);
 }
 
 .sudoku-cell--box-bottom {
-  border-bottom: 2px solid color-mix(in srgb, var(--color-ink) 55%, var(--color-border));
+  border-bottom: 2px solid color-mix(in srgb, var(--color-ink) 78%, transparent);
 }
 
 .sudoku-cell--given {
-  background: color-mix(in srgb, var(--color-paper) 78%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-paper) 58%, var(--color-surface));
   color: var(--color-ink);
 }
 
 .sudoku-cell--peer {
-  background: color-mix(in srgb, var(--color-clay) 32%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-border) 30%, var(--color-surface));
 }
 
 .sudoku-cell--same {
-  background: color-mix(in srgb, var(--color-gold) 38%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-clay) 62%, var(--color-surface));
 }
 
 .sudoku-cell--hint-related {
-  background: color-mix(in srgb, var(--color-sage) 48%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-sage) 50%, var(--color-surface));
 }
 
 .sudoku-cell--selected {
-  background: color-mix(in srgb, var(--color-clay) 72%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-clay) 45%, var(--color-surface));
   box-shadow: inset 0 0 0 2px var(--color-ink);
   z-index: 2;
 }
@@ -129,7 +236,7 @@
 
 .sudoku-cell__value {
   font-family: var(--font-sans);
-  font-size: clamp(1.15rem, 2.8vw, 1.65rem);
+  font-size: clamp(1.15rem, 2.5vw, 1.6rem);
   font-weight: 500;
   line-height: 1;
 }
@@ -146,14 +253,14 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  width: 90%;
-  height: 90%;
+  width: 88%;
+  height: 88%;
   place-items: center;
 }
 
 .sudoku-cell__note {
   font-family: var(--font-mono);
-  font-size: clamp(0.52rem, 1.05vw, 0.7rem);
+  font-size: clamp(0.52rem, 1vw, 0.68rem);
   line-height: 1;
   color: var(--color-muted);
 }
@@ -167,8 +274,8 @@
   position: absolute;
   top: 4px;
   right: 4px;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: #9e2a1f;
   pointer-events: none;
@@ -200,7 +307,7 @@
   justify-content: center;
   gap: var(--space-3);
   padding: var(--space-8);
-  background: color-mix(in srgb, var(--color-paper) 94%, transparent);
+  background: color-mix(in srgb, var(--color-paper) 95%, transparent);
 }
 
 .sudoku-overlay__eyebrow {
@@ -212,13 +319,13 @@
 }
 
 .sudoku-overlay__title {
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-size: clamp(1.5rem, 3vw, 2rem);
 }
 
 .sudoku-overlay__text {
   max-width: 38ch;
   color: var(--color-muted);
-  font-size: 0.95rem;
+  font-size: 0.94rem;
 }
 
 .sudoku-overlay__actions {
@@ -228,301 +335,114 @@
   margin-top: var(--space-2);
 }
 
-/* Banner Petunjuk Logika */
-.sudoku-hint-banner {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: start;
-  gap: var(--space-3);
-  width: 100%;
-  max-width: 560px;
-  margin-inline: auto;
-  padding: var(--space-3) var(--space-4);
-  background: color-mix(in srgb, var(--color-sage) 45%, var(--color-surface));
-  border: var(--border-width) solid color-mix(in srgb, var(--color-ink) 20%, var(--color-border));
-  border-radius: var(--radius-card);
-}
-
-.sudoku-hint-banner--conflict,
-.sudoku-hint-banner--incorrect {
-  background: color-mix(in srgb, #f6dad4 70%, var(--color-surface));
-  border-color: color-mix(in srgb, #9e2a1f 30%, var(--color-border));
-}
-
-.sudoku-hint-banner--pointing-pair,
-.sudoku-hint-banner--naked-pair {
-  background: color-mix(in srgb, var(--color-blue-gray) 65%, var(--color-surface));
-  border-color: color-mix(in srgb, #2f4d63 28%, var(--color-border));
-}
-
-.sudoku-hint-banner__icon {
+/* Catatan Petunjuk Editorial (Marginalia — tanpa ikon lingkaran generik) */
+.sudoku-hint-note {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--color-surface);
-  color: var(--color-ink);
-  border: var(--border-width) solid var(--color-border);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 10px 12px 10px 14px;
+  border-left: 3px solid #4c6b3c;
+  background: color-mix(in srgb, var(--color-sage) 26%, var(--color-paper));
 }
 
-.sudoku-hint-banner__body {
+.sudoku-hint-note--conflict,
+.sudoku-hint-note--incorrect {
+  border-left-color: #9e2a1f;
+  background: color-mix(in srgb, #f6dad4 55%, var(--color-paper));
+}
+
+.sudoku-hint-note--pointing-pair,
+.sudoku-hint-note--naked-pair {
+  border-left-color: #23475c;
+  background: color-mix(in srgb, var(--color-blue-gray) 55%, var(--color-paper));
+}
+
+.sudoku-hint-note__body {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.sudoku-hint-banner__title {
-  font-size: 0.875rem;
+.sudoku-hint-note__title {
+  font-size: 0.84rem;
   font-weight: 600;
   color: var(--color-ink);
 }
 
-.sudoku-hint-banner__text {
-  font-size: 0.85rem;
+.sudoku-hint-note__text {
+  font-size: 0.82rem;
   line-height: 1.5;
   color: var(--color-ink-soft);
 }
 
-.sudoku-hint-banner__close {
+.sudoku-hint-note__close {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
   border: 0;
-  border-radius: var(--radius-control);
+  border-radius: 4px;
   background: transparent;
   color: var(--color-muted);
+  cursor: pointer;
 }
 
-.sudoku-hint-banner__close:hover {
+.sudoku-hint-note__close:hover {
   background: color-mix(in srgb, var(--color-ink) 8%, transparent);
   color: var(--color-ink);
 }
 
-/* Panel Samping */
-.sudoku-panel {
+/* Kolom Kontrol Kanan — Langsung di atas kertas, nol card-in-a-card */
+.sudoku-controls {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  background: var(--color-surface);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-card);
+  gap: var(--space-5);
 }
 
-.sudoku-panel__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.sudoku-difficulty {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  flex: 1;
-  gap: 3px;
-  padding: 3px;
-  background: var(--color-paper);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-control);
-}
-
-.sudoku-difficulty__btn {
-  padding: 6px 4px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--color-muted);
-  font-size: 0.78rem;
-  font-weight: 500;
-  white-space: nowrap;
-  transition: background-color var(--transition-fast) ease,
-    color var(--transition-fast) ease;
-}
-
-.sudoku-difficulty__btn:hover {
-  color: var(--color-ink);
-}
-
-.sudoku-difficulty__btn--active {
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(40, 41, 35, 0.08);
-}
-
-.sudoku-difficulty__btn--extreme.sudoku-difficulty__btn--active {
-  color: #9e2a1f;
-}
-
-.sudoku-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex-shrink: 0;
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-control);
-  background: var(--color-paper);
-  color: var(--color-ink);
-  transition: background-color var(--transition-fast) ease,
-    border-color var(--transition-fast) ease;
-}
-
-.sudoku-icon-btn:hover {
-  background: var(--color-clay);
-  border-color: var(--color-ink);
-}
-
-.sudoku-stats {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-3);
-}
-
-.sudoku-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-3);
-  background: var(--color-paper);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-control);
-}
-
-.sudoku-stat__label {
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
-.sudoku-stat__value {
-  font-size: 1.35rem;
-  font-weight: 600;
-  color: var(--color-ink);
-  line-height: 1.2;
-}
-
-.sudoku-substats {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.85rem;
-  color: var(--color-muted);
-  padding-inline: 2px;
-}
-
-.sudoku-substats strong {
-  color: var(--color-ink);
-  font-weight: 600;
-}
-
-/* Numpad */
-.sudoku-numpad {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-2);
-}
-
-.sudoku-numpad__btn {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 52px;
-  padding: 6px;
-  background: var(--color-paper);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-control);
-  color: var(--color-ink);
-  transition: background-color var(--transition-fast) ease,
-    border-color var(--transition-fast) ease,
-    transform var(--transition-fast) ease;
-}
-
-.sudoku-numpad__btn:hover:not(:disabled) {
-  background: var(--color-clay);
-  border-color: var(--color-ink);
-}
-
-.sudoku-numpad__btn:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.sudoku-numpad__btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.sudoku-numpad__btn--done {
-  opacity: 0.45;
-  background: transparent;
-}
-
-.sudoku-numpad__btn--note {
-  border-style: dashed;
-}
-
-.sudoku-numpad__digit {
-  font-family: var(--font-mono);
-  font-size: 1.2rem;
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.sudoku-numpad__rem {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: var(--color-muted);
-  line-height: 1;
-  margin-top: 2px;
-}
-
-/* Alat bantu */
+/* Alat Bantu Datar 4 Kolom */
 .sudoku-tools {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding-bottom: var(--space-4);
+  border-bottom: var(--border-width) solid var(--color-border);
 }
 
 .sudoku-tool-btn {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 8px 10px;
-  background: var(--color-paper);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-control);
+  gap: 5px;
+  padding: 9px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   color: var(--color-ink);
-  font-size: 0.8125rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  transition: background-color var(--transition-fast) ease,
-    border-color var(--transition-fast) ease;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast) ease,
+    color var(--transition-fast) ease;
 }
 
 .sudoku-tool-btn:hover:not(:disabled) {
-  background: var(--color-clay);
-  border-color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-ink) 6%, transparent);
 }
 
 .sudoku-tool-btn:disabled {
-  opacity: 0.45;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
 .sudoku-tool-btn--active {
   background: var(--color-ink);
   color: var(--color-paper);
-  border-color: var(--color-ink);
 }
 
 .sudoku-tool-btn--active:hover:not(:disabled) {
@@ -531,116 +451,225 @@
 }
 
 .sudoku-tool-btn--hint:hover:not(:disabled) {
-  background: var(--color-sage);
+  background: color-mix(in srgb, var(--color-sage) 55%, transparent);
 }
 
-/* Aksi sesi */
-.sudoku-actions {
+/* Numpad Tactile 3x3 — Angka sisa di sudut kanan atas */
+.sudoku-numpad {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
-  padding-top: var(--space-2);
-  border-top: var(--border-width) solid var(--color-border);
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 
-.sudoku-actions__btn {
-  display: inline-flex;
+.sudoku-numpad__btn {
+  position: relative;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  width: 100%;
-  font-size: 0.875rem;
-}
-
-.sudoku-actions__btn--full {
-  grid-column: 1 / -1;
-}
-
-/* Mobile Compact HUD */
-.sudoku-mobile-hud {
-  display: none;
-}
-
-/* Panduan bawah (Split Context) */
-.sudoku-guide {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
-}
-
-.sudoku-guide__card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-5);
+  height: 58px;
+  padding: 0;
   background: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-card);
+  border-radius: 6px;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast) ease,
+    border-color var(--transition-fast) ease,
+    transform 80ms ease;
 }
 
-.sudoku-guide__title {
-  font-size: 1rem;
+.sudoku-numpad__btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-clay) 45%, var(--color-surface));
+  border-color: var(--color-ink);
+}
+
+.sudoku-numpad__btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.sudoku-numpad__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sudoku-numpad__btn--done {
+  opacity: 0.32;
+  background: transparent;
+  border-color: color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.sudoku-numpad__btn--note {
+  border-style: dashed;
+  background: transparent;
+}
+
+.sudoku-numpad__digit {
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.sudoku-numpad__rem {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  line-height: 1;
+}
+
+/* Meta Ringkas */
+.sudoku-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--color-border);
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.sudoku-meta strong {
+  color: var(--color-ink);
   font-weight: 600;
 }
 
-.sudoku-guide__list {
+/* Aksi Sesi 1 Baris */
+.sudoku-session {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sudoku-session__primary {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 0.875rem;
+}
+
+.sudoku-session__reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast) ease,
+    background-color var(--transition-fast) ease;
+}
+
+.sudoku-session__reset:hover {
+  color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-ink) 6%, transparent);
+}
+
+/* Panduan Terlipat (Disclosure) */
+.sudoku-disclosure {
+  margin-top: var(--space-2);
+  border-top: var(--border-width) solid var(--color-border);
+  padding-top: var(--space-4);
+}
+
+.sudoku-disclosure__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  cursor: pointer;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: color var(--transition-fast) ease;
+}
+
+.sudoku-disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+
+.sudoku-disclosure__summary:hover {
+  color: var(--color-ink);
+}
+
+.sudoku-disclosure__chevron {
+  transition: transform var(--transition-fast) ease;
+}
+
+.sudoku-disclosure[open] .sudoku-disclosure__chevron {
+  transform: rotate(180deg);
+}
+
+.sudoku-disclosure__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  padding-top: var(--space-4);
+}
+
+.sudoku-disclosure__heading {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  margin-bottom: var(--space-2);
+}
+
+.sudoku-disclosure__list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  font-size: 0.875rem;
+  gap: 6px;
+  font-size: 0.84rem;
   color: var(--color-muted);
   line-height: 1.55;
 }
 
-.sudoku-guide__list kbd {
+.sudoku-disclosure__list kbd {
   display: inline-block;
-  padding: 1px 6px;
+  padding: 1px 5px;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--color-ink);
-  background: var(--color-paper);
+  background: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-@media (max-width: 900px) {
-  .sudoku-mobile-hud {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    padding: var(--space-3) var(--space-4);
-    background: var(--color-surface);
-    border: var(--border-width) solid var(--color-border);
-    border-radius: var(--radius-card);
-  }
-
-  .sudoku-mobile-hud__item {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-
-  .sudoku-mobile-hud__label {
-    font-size: 0.65rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-muted);
-  }
-
-  .sudoku-mobile-hud__value {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--color-ink);
-  }
-
+/* Responsif Mobile */
+@media (max-width: 860px) {
   .sudoku-stage {
     grid-template-columns: 1fr;
-    gap: var(--space-4);
+    gap: var(--space-5);
   }
 
-  .sudoku-panel__mute {
-    display: none;
+  .sudoku-board-frame {
+    max-width: 520px;
+    margin-inline: auto;
+  }
+
+  .sudoku-hint-note {
+    max-width: 520px;
+    margin-inline: auto;
+    width: 100%;
+  }
+
+  .sudoku-controls {
+    max-width: 520px;
+    width: 100%;
+    margin-inline: auto;
+    gap: var(--space-4);
   }
 
   .sudoku-numpad {
@@ -649,31 +678,49 @@
   }
 
   .sudoku-numpad__btn {
-    min-height: 48px;
-    padding: 4px 2px;
+    height: 48px;
   }
 
   .sudoku-numpad__digit {
     font-size: 1.05rem;
   }
 
-  .sudoku-guide {
+  .sudoku-numpad__rem {
+    top: 3px;
+    right: 4px;
+    font-size: 0.56rem;
+  }
+
+  .sudoku-disclosure__grid {
     grid-template-columns: 1fr;
+    gap: var(--space-4);
   }
 }
 
-@media (max-width: 400px) {
-  .sudoku-difficulty {
-    grid-template-columns: repeat(2, 1fr);
+@media (max-width: 520px) {
+  .sudoku-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .sudoku-cell,
-  .sudoku-difficulty__btn,
-  .sudoku-icon-btn,
-  .sudoku-numpad__btn,
-  .sudoku-tool-btn {
-    transition: none;
+  .sudoku-tabs {
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  .sudoku-tabs__btn {
+    font-size: 0.84rem;
+    padding-bottom: 8px;
+  }
+
+  .sudoku-telemetry {
+    justify-content: space-between;
+    padding-top: 4px;
+    padding-bottom: 8px;
+  }
+
+  .sudoku-telemetry__actions {
+    margin-left: auto;
   }
 }
