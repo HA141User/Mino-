@@ -30,6 +30,7 @@ export function SearchBar({
         type="search"
         value={value}
         placeholder={placeholder}
+        maxLength={100}
         autoComplete="off"
         onChange={(event) => onChange(event.target.value)}
       />

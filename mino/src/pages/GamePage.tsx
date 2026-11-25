@@ -16,8 +16,9 @@ export function GamePage() {
     return <NotFoundPage />
   }
 
-  const GameComponent =
-    gameRegistry[game.slug as keyof typeof gameRegistry]
+  const GameComponent = Object.hasOwn(gameRegistry, game.slug)
+    ? gameRegistry[game.slug as keyof typeof gameRegistry]
+    : undefined
   const related = games.filter((entry) => entry.slug !== game.slug).slice(0, 3)
 
   return (

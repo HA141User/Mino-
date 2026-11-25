@@ -358,4 +358,80 @@ describe('sudoku engine', () => {
       expect(reset.history).toHaveLength(0)
     })
   })
+
+  describe('adversarial & kondisi batas Sudoku', () => {
+    it('BUG-SDK-01: computeHint tetap memprioritaskan sel konflik pada indeks 0 (Baris 1, Kolom 1)', () => {
+      const puzzle = [...VALID_SOLUTION]
+      puzzle[0] = 0 // solusi 5, bentrok dengan sel 1 (given 3) jika diisi 3
+      puzzle[9] = 0 // solusi 6, bentrok dengan sel 10 (given 7) jika diisi 7
+      let state = createStateFromBoard(puzzle, VALID_SOLUTION, 'easy')
+
+      state = selectCell(state, 9)
+      state = inputDigit(state, 7)
+      state = selectCell(state, 0)
+      state = inputDigit(state, 3)
+
+      const hint = computeHint(state)
+      expect(hint?.kind).toBe('conflict')
+      expect(hint?.cellIndex).toBe(0)
+    })
+
+    it('BUG-SDK-01b: computeHint tidak pernah menarget sel given ketika indeks 0 satu-satunya konflik editable', () => {
+      const board = new Array<number>(CELL_COUNT).fill(0)
+      board[1] = 3 // given di baris 0 kol 1
+      let state = createStateFromBoard(board, VALID_SOLUTION, 'easy')
+
+      state = selectCell(state, 0)
+      state = inputDigit(state, 3) // konflik sel 0 (editable) vs sel 1 (given)
+
+      const hint = computeHint(state)
+      expect(hint?.kind).toBe('conflict')
+      expect(hint?.cellIndex).toBe(0)
+      expect(state.puzzle[hint!.cellIndex]).toBe(0)
+    })
+
+    it('BUG-SDK-02a: spam requestHint pada kondisi identik tidak menggandakan hintsUsed', () => {
+      const puzzle = [...VALID_SOLUTION]
+      puzzle[0] = 0
+      const state = createStateFromBoard(puzzle, VALID_SOLUTION, 'easy')
+
+      const first = requestHint(state)
+      const second = requestHint(first)
+      expect(first.hintsUsed).toBe(1)
+      expect(second.hintsUsed).toBe(1)
+    })
+
+    it('BUG-SDK-02b: computeHint tetap aman saat seluruh baris editable diisi salah semua', () => {
+      const puzzle = [...VALID_SOLUTION]
+      for (let i = 0; i < 9; i++) {
+        puzzle[i] = 0
+      }
+      let state = createStateFromBoard(puzzle, VALID_SOLUTION, 'easy')
+      for (let i = 0; i < 9; i++) {
+        state = selectCell(state, i)
+        state = inputDigit(state, (VALID_SOLUTION[i] % 9) + 1)
+      }
+
+      const hint = computeHint(state)
+      expect(hint).not.toBeNull()
+      expect(['conflict', 'incorrect']).toContain(hint?.kind)
+    })
+
+    it('BUG-SDK-02c: generator Ekstrem tetap menghasilkan papan teknik lanjutan meski RNG konstan/buruk', () => {
+      const constantRng = () => 0
+      const extreme = generatePuzzle('extreme', constantRng)
+      expect(isBoardSolved(extreme.solution)).toBe(true)
+      expect(countSolutions(extreme.puzzle, 2)).toBe(1)
+      expect(canSolveWithSinglesOnly(extreme.puzzle)).toBe(false)
+    })
+
+    it('BUG-SDK-05: selectCell dan inputDigit menolak angka pecahan', () => {
+      const puzzle = [...VALID_SOLUTION]
+      puzzle[0] = 0
+      const state = createStateFromBoard(puzzle, VALID_SOLUTION, 'easy')
+
+      expect(selectCell(state, 1.5).selectedCell).toBe(0)
+      expect(inputDigit(state, 2.5).values[0]).toBe(0)
+    })
+  })
 })

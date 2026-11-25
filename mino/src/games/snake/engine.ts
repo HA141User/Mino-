@@ -94,6 +94,7 @@ export type SnakeStatus =
   | 'running'
   | 'paused'
   | 'game-over'
+  | 'won'
 
 export type BonusFood = {
   x: number
@@ -141,23 +142,36 @@ function pointKey(point: Point): string {
   return `${point.x},${point.y}`
 }
 
-export function spawnFood(snake: Point[], random = Math.random): Point {
+export function spawnFood(
+  snake: Point[],
+  random = Math.random,
+  excluded?: Point | null,
+): Point {
   const occupied = new Set(snake.map(pointKey))
+  const excludedKey = excluded ? pointKey(excluded) : null
   const free: Point[] = []
+  const freeWithoutExcluded: Point[] = []
 
   for (let y = 0; y < BOARD_SIZE; y += 1) {
     for (let x = 0; x < BOARD_SIZE; x += 1) {
-      if (!occupied.has(`${x},${y}`)) {
-        free.push({ x, y })
+      const key = `${x},${y}`
+      if (!occupied.has(key)) {
+        const point = { x, y }
+        free.push(point)
+        if (key !== excludedKey) {
+          freeWithoutExcluded.push(point)
+        }
       }
     }
   }
 
-  if (free.length === 0) {
+  const pool = freeWithoutExcluded.length > 0 ? freeWithoutExcluded : free
+
+  if (pool.length === 0) {
     return { ...snake[0] }
   }
 
-  return free[Math.floor(random() * free.length)]
+  return pool[Math.floor(random() * pool.length)]
 }
 
 export function spawnBonusFood(
@@ -268,7 +282,11 @@ export function queueDirection(
   state: SnakeState,
   direction: Direction,
 ): SnakeState {
-  if (state.status === 'game-over') {
+  if (
+    state.status === 'game-over' ||
+    state.status === 'won' ||
+    state.status === 'paused'
+  ) {
     return state
   }
 
@@ -377,8 +395,6 @@ export function step(state: SnakeState): SnakeState {
     ? [nextHead, ...state.snake]
     : [nextHead, ...state.snake.slice(0, -1)]
 
-  const food = willEatRegular ? spawnFood(snake) : state.food
-
   const nextFoodsEaten = willEatRegular
     ? (state.foodsEaten ?? 0) + 1
     : (state.foodsEaten ?? 0)
@@ -392,14 +408,39 @@ export function step(state: SnakeState): SnakeState {
   }
   const nextScore = state.score + addedScore
 
-  let nextBonusFood: BonusFood | null = null
-  if (willEatBonus) {
-    nextBonusFood = null
-  } else if (state.bonusFood) {
+  // Menang jika seluruh papan telah terisi penuh oleh tubuh ular
+  if (snake.length >= BOARD_SIZE * BOARD_SIZE) {
+    return {
+      snake,
+      food: state.food,
+      bonusFood: null,
+      direction: nextDirection,
+      queuedDirection: nextQueuedDirection,
+      directionQueue: remainingQueue,
+      score: nextScore,
+      foodsEaten: nextFoodsEaten,
+      length: snake.length,
+      countdown: 0,
+      status: 'won',
+    }
+  }
+
+  // Hitung status bonusFood yang bertahan sebelum menentukan posisi makanan reguler
+  let persistingBonusFood: BonusFood | null = null
+  if (!willEatBonus && state.bonusFood) {
     const nextTimer = state.bonusFood.timer - 1
-    nextBonusFood =
+    persistingBonusFood =
       nextTimer > 0 ? { ...state.bonusFood, timer: nextTimer } : null
-  } else if (
+  }
+
+  const food = willEatRegular
+    ? spawnFood(snake, Math.random, persistingBonusFood)
+    : state.food
+
+  let nextBonusFood: BonusFood | null = persistingBonusFood
+  if (
+    !willEatBonus &&
+    !persistingBonusFood &&
     willEatRegular &&
     nextFoodsEaten > 0 &&
     nextFoodsEaten % BONUS_FOOD_INTERVAL === 0

@@ -229,10 +229,24 @@ export function isBoardSolved(values: number[]): boolean {
   return getConflicts(values).size === 0
 }
 
+function safeRandomUnit(rng: () => number): number {
+  const raw = rng()
+  if (!Number.isFinite(raw)) {
+    return 0
+  }
+  if (raw < 0) {
+    return 0
+  }
+  if (raw >= 1) {
+    return 0.999999999
+  }
+  return raw
+}
+
 function shuffle<T>(items: T[], rng: () => number): T[] {
   const copy = [...items]
   for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
+    const j = Math.floor(safeRandomUnit(rng) * (i + 1))
     ;[copy[i], copy[j]] = [copy[j], copy[i]]
   }
   return copy
@@ -316,14 +330,18 @@ export function generateSolvedBoard(rng: () => number = Math.random): number[] {
   return board
 }
 
+const MAX_SEARCH_NODES = 20_000
+
 export function countSolutions(board: number[], limit = 2): number {
   const working = [...board]
   let solutions = 0
+  let nodes = 0
 
   const search = () => {
-    if (solutions >= limit) {
+    if (solutions >= limit || nodes >= MAX_SEARCH_NODES) {
       return
     }
+    nodes += 1
     const next = findMostConstrainedCell(working)
     if (!next) {
       solutions += 1
@@ -337,14 +355,14 @@ export function countSolutions(board: number[], limit = 2): number {
       working[next.index] = digit
       search()
       working[next.index] = 0
-      if (solutions >= limit) {
+      if (solutions >= limit || nodes >= MAX_SEARCH_NODES) {
         return
       }
     }
   }
 
   search()
-  return solutions
+  return nodes >= MAX_SEARCH_NODES ? limit : solutions
 }
 
 const ALL_UNITS: number[][] = [
@@ -483,6 +501,20 @@ function digPuzzle(
 }
 
 const EXTREME_MAX_ATTEMPTS = 14
+const EXTREME_TIME_BUDGET_MS = 250
+const VERIFIED_EXTREME_FALLBACK_SEED = 404
+
+function createDeterministicRng(seed: number): () => number {
+  let state = seed >>> 0
+  return () => {
+    state = (1664525 * state + 1013904223) >>> 0
+    return state / 0x100000000
+  }
+}
+
+function nowMs(): number {
+  return typeof performance !== 'undefined' ? performance.now() : Date.now()
+}
 
 export function generatePuzzle(
   difficulty: SudokuDifficulty,
@@ -497,9 +529,15 @@ export function generatePuzzle(
   }
 
   // Untuk mode Ekstrem: cari papan dengan petunjuk sangat sedikit
-  // yang TIDAK bisa diselesaikan hanya dengan Naked/Hidden Single.
-  let bestCandidate: { puzzle: number[]; solution: number[]; clues: number } | null =
-    null
+  // yang TIDAK bisa diselesaikan hanya dengan Naked/Hidden Single,
+  // dengan batas waktu agar main thread tidak pernah membeku.
+  const startedAt = nowMs()
+  let bestCandidate: {
+    puzzle: number[]
+    solution: number[]
+    clues: number
+    advanced: boolean
+  } | null = null
 
   for (let attempt = 0; attempt < EXTREME_MAX_ATTEMPTS; attempt++) {
     const solution = generateSolvedBoard(rng)
@@ -512,13 +550,33 @@ export function generatePuzzle(
 
     if (
       !bestCandidate ||
-      (needsAdvancedTechniques &&
-        canSolveWithSinglesOnly(bestCandidate.puzzle)) ||
-      (needsAdvancedTechniques ===
-        !canSolveWithSinglesOnly(bestCandidate.puzzle) &&
+      (needsAdvancedTechniques && !bestCandidate.advanced) ||
+      (needsAdvancedTechniques === bestCandidate.advanced &&
         clues < bestCandidate.clues)
     ) {
-      bestCandidate = { puzzle, solution, clues }
+      bestCandidate = {
+        puzzle,
+        solution,
+        clues,
+        advanced: needsAdvancedTechniques,
+      }
+    }
+
+    if (bestCandidate && nowMs() - startedAt >= EXTREME_TIME_BUDGET_MS) {
+      break
+    }
+  }
+
+  // Jika semua percobaan acak / budget waktu belum menghasilkan papan Ekstrem sejati,
+  // gunakan seed terverifikasi yang dijamin memerlukan teknik eliminasi lanjutan.
+  if (!bestCandidate || !bestCandidate.advanced) {
+    const fallbackRng = createDeterministicRng(VERIFIED_EXTREME_FALLBACK_SEED)
+    for (let i = 0; i < 6; i++) {
+      const solution = generateSolvedBoard(fallbackRng)
+      const { puzzle, clues } = digPuzzle(solution, targetClues, fallbackRng)
+      if (!canSolveWithSinglesOnly(puzzle) && clues <= 26) {
+        return { puzzle, solution }
+      }
     }
   }
 
@@ -585,7 +643,12 @@ export function selectCell(
   state: SudokuState,
   index: number,
 ): SudokuState {
-  if (index < 0 || index >= CELL_COUNT || state.status === 'paused') {
+  if (
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= CELL_COUNT ||
+    state.status === 'paused'
+  ) {
     return state
   }
   return {
@@ -656,6 +719,7 @@ export function inputDigit(state: SudokuState, digit: number): SudokuState {
   if (
     state.status !== 'playing' ||
     state.selectedCell === null ||
+    !Number.isInteger(digit) ||
     digit < 1 ||
     digit > 9
   ) {
@@ -780,12 +844,15 @@ export function computeHint(state: SudokuState): SudokuHint | null {
   const conflicts = getConflicts(state.values)
   if (conflicts.size > 0) {
     const conflictList = Array.from(conflicts)
+    const selectedEditableConflict =
+      state.selectedCell !== null &&
+      conflicts.has(state.selectedCell) &&
+      state.puzzle[state.selectedCell] === 0
+        ? state.selectedCell
+        : undefined
     const target =
-      (state.selectedCell !== null &&
-        conflicts.has(state.selectedCell) &&
-        state.puzzle[state.selectedCell] === 0 &&
-        state.selectedCell) ||
-      conflictList.find((idx) => state.puzzle[idx] === 0) ||
+      selectedEditableConflict ??
+      conflictList.find((idx) => state.puzzle[idx] === 0) ??
       conflictList[0]
 
     const targetValue = state.values[target]
@@ -1017,11 +1084,15 @@ export function requestHint(state: SudokuState): SudokuState {
   if (!hint) {
     return state
   }
+  const sameAsActive =
+    state.activeHint !== null &&
+    state.activeHint.kind === hint.kind &&
+    state.activeHint.cellIndex === hint.cellIndex
   return {
     ...state,
     selectedCell: hint.cellIndex,
     activeHint: hint,
-    hintsUsed: state.hintsUsed + 1,
+    hintsUsed: sameAsActive ? state.hintsUsed : state.hintsUsed + 1,
   }
 }
 

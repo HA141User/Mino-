@@ -43,11 +43,14 @@ import {
   unlockAudio,
   writeStoredMute,
 } from './sound'
+import { readStoredBoundedInt } from '../../utils/storage'
 import './snake.css'
 
 const DIFFICULTY_KEY = 'mino:snake:difficulty'
 const LEGACY_BEST_SCORE_KEY = 'mino:snake:best'
 const LEGACY_BEST_LENGTH_KEY = 'mino:snake:best-length'
+const MAX_SNAKE_SCORE = 100_000
+const MAX_SNAKE_LENGTH = BOARD_SIZE * BOARD_SIZE
 
 function bestScoreKey(difficulty: Difficulty): string {
   return `mino:snake:${difficulty}:best`
@@ -85,19 +88,10 @@ function triggerHaptic(type: 'tap' | 'eat' | 'bonus' | 'game-over') {
   }
 }
 
-function readStoredNumber(key: string, fallbackKey?: string): number {
-  try {
-    const stored =
-      window.localStorage.getItem(key) ??
-      (fallbackKey ? window.localStorage.getItem(fallbackKey) : null)
-    const value = stored ? Number.parseInt(stored, 10) : 0
-    return Number.isFinite(value) && value > 0 ? value : 0
-  } catch {
-    return 0
-  }
-}
-
 function writeStoredNumber(key: string, value: number) {
+  if (typeof window === 'undefined') {
+    return
+  }
   try {
     window.localStorage.setItem(key, String(value))
   } catch {
@@ -106,20 +100,29 @@ function writeStoredNumber(key: string, value: number) {
 }
 
 function readBestScore(difficulty: Difficulty): number {
-  return readStoredNumber(
-    bestScoreKey(difficulty),
-    difficulty === DEFAULT_DIFFICULTY ? LEGACY_BEST_SCORE_KEY : undefined,
+  return (
+    readStoredBoundedInt(
+      bestScoreKey(difficulty),
+      MAX_SNAKE_SCORE,
+      difficulty === DEFAULT_DIFFICULTY ? LEGACY_BEST_SCORE_KEY : undefined,
+    ) ?? 0
   )
 }
 
 function readBestLength(difficulty: Difficulty): number {
-  return readStoredNumber(
-    bestLengthKey(difficulty),
-    difficulty === DEFAULT_DIFFICULTY ? LEGACY_BEST_LENGTH_KEY : undefined,
+  return (
+    readStoredBoundedInt(
+      bestLengthKey(difficulty),
+      MAX_SNAKE_LENGTH,
+      difficulty === DEFAULT_DIFFICULTY ? LEGACY_BEST_LENGTH_KEY : undefined,
+    ) ?? 0
   )
 }
 
 function readDifficulty(): Difficulty {
+  if (typeof window === 'undefined') {
+    return DEFAULT_DIFFICULTY
+  }
   try {
     const stored = window.localStorage.getItem(DIFFICULTY_KEY)
     return isDifficulty(stored) ? stored : DEFAULT_DIFFICULTY
@@ -191,7 +194,9 @@ function reducer(state: GameState, action: Action): GameState {
   }
 
   const next = applyAction(state, action)
-  const isNewRun = action.type === 'start' || action.type === 'restart'
+  const isNewRun =
+    (action.type === 'start' && state.status !== 'paused') ||
+    action.type === 'restart'
 
   return {
     ...next,
@@ -208,16 +213,16 @@ function createGameState(): GameState {
   return withRecords(createInitialState(), readDifficulty())
 }
 
-const KEY_DIRECTIONS: Record<string, Direction> = {
-  arrowup: 'up',
-  arrowdown: 'down',
-  arrowleft: 'left',
-  arrowright: 'right',
-  w: 'up',
-  a: 'left',
-  s: 'down',
-  d: 'right',
-}
+const KEY_DIRECTIONS = new Map<string, Direction>([
+  ['arrowup', 'up'],
+  ['arrowdown', 'down'],
+  ['arrowleft', 'left'],
+  ['arrowright', 'right'],
+  ['w', 'up'],
+  ['a', 'left'],
+  ['s', 'down'],
+  ['d', 'right'],
+])
 
 function formatScore(score: number): string {
   return score.toString().padStart(2, '0')
@@ -244,8 +249,10 @@ export function SnakeGame() {
   const prevScoreRef = useRef(state.score)
   const prevFoodsEatenRef = useRef(state.foodsEaten)
   const prevStatusRef = useRef(state.status)
-  const prevCountdownRef = useRef(state.countdown)
+  const prevCountdownRef = useRef<number | null>(null)
   const prevBonusFoodRef = useRef(state.bonusFood)
+  const countdownRemainingRef = useRef(COUNTDOWN_STEP_MS)
+  const countdownStartedAtRef = useRef<number | null>(null)
 
   const toggleMute = () => {
     unlockAudio()
@@ -259,6 +266,13 @@ export function SnakeGame() {
   const handleDirectionInput = useCallback(
     (direction: Direction) => {
       unlockAudio()
+      if (
+        state.status === 'paused' ||
+        state.status === 'game-over' ||
+        state.status === 'won'
+      ) {
+        return
+      }
       triggerHaptic('tap')
 
       if (state.status === 'idle') {
@@ -361,6 +375,8 @@ export function SnakeGame() {
     muted,
   ])
 
+  const tickMs = getTickMs(state.difficulty, state.foodsEaten)
+
   useEffect(() => {
     if (state.status === 'countdown') {
       if (
@@ -370,16 +386,18 @@ export function SnakeGame() {
         if (!muted) {
           playCountdownTickSound()
         }
+        prevCountdownRef.current = state.countdown
       }
-    } else if (
-      prevStatusRef.current === 'countdown' &&
-      state.status === 'running'
-    ) {
-      if (!muted) {
+    } else {
+      if (
+        prevStatusRef.current === 'countdown' &&
+        state.status === 'running' &&
+        !muted
+      ) {
         playCountdownGoSound()
       }
+      prevCountdownRef.current = null
     }
-    prevCountdownRef.current = state.countdown
   }, [state.countdown, state.status, muted])
 
   useEffect(() => {
@@ -391,31 +409,52 @@ export function SnakeGame() {
       if (!muted) {
         playGameOverSound()
       }
+    } else if (state.status === 'won' && prevStatusRef.current !== 'won') {
+      triggerHaptic('bonus')
+      if (!muted) {
+        playBonusEatSound()
+      }
     }
     prevStatusRef.current = state.status
   }, [state.status, muted])
 
   useEffect(() => {
     if (state.status === 'countdown') {
-      const timer = window.setInterval(
-        () => dispatch({ type: 'countdown' }),
-        COUNTDOWN_STEP_MS,
-      )
+      const delay = Math.max(50, countdownRemainingRef.current)
+      countdownStartedAtRef.current = Date.now()
 
-      return () => window.clearInterval(timer)
+      const timer = window.setTimeout(() => {
+        countdownRemainingRef.current = COUNTDOWN_STEP_MS
+        countdownStartedAtRef.current = null
+        dispatch({ type: 'countdown' })
+      }, delay)
+
+      return () => {
+        window.clearTimeout(timer)
+        if (countdownStartedAtRef.current !== null) {
+          const elapsed = Date.now() - countdownStartedAtRef.current
+          countdownRemainingRef.current = Math.max(
+            50,
+            countdownRemainingRef.current - elapsed,
+          )
+          countdownStartedAtRef.current = null
+        }
+      }
+    }
+
+    if (state.status !== 'paused') {
+      countdownRemainingRef.current = COUNTDOWN_STEP_MS
+      countdownStartedAtRef.current = null
     }
 
     if (state.status !== 'running') {
       return
     }
 
-    const timer = window.setInterval(
-      () => dispatch({ type: 'step' }),
-      getTickMs(state.difficulty, state.foodsEaten),
-    )
+    const timer = window.setInterval(() => dispatch({ type: 'step' }), tickMs)
 
     return () => window.clearInterval(timer)
-  }, [state.status, state.difficulty, state.foodsEaten])
+  }, [state.status, state.countdown, tickMs])
 
   useEffect(() => {
     if (state.bestScore > 0) {
@@ -424,7 +463,7 @@ export function SnakeGame() {
   }, [state.bestScore, state.difficulty])
 
   useEffect(() => {
-    if (state.bestLength > 0) {
+    if (state.bestLength > 3) {
       writeStoredNumber(bestLengthKey(state.difficulty), state.bestLength)
     }
   }, [state.bestLength, state.difficulty])
@@ -497,7 +536,10 @@ export function SnakeGame() {
           dispatch({ type: 'start' })
         } else if (state.status !== 'running') {
           dispatch({
-            type: state.status === 'game-over' ? 'restart' : 'start',
+            type:
+              state.status === 'game-over' || state.status === 'won'
+                ? 'restart'
+                : 'start',
           })
         }
 
@@ -508,9 +550,16 @@ export function SnakeGame() {
         event.preventDefault()
         unlockAudio()
 
-        if (state.status === 'idle' || state.status === 'game-over') {
+        if (
+          state.status === 'idle' ||
+          state.status === 'game-over' ||
+          state.status === 'won'
+        ) {
           dispatch({
-            type: state.status === 'game-over' ? 'restart' : 'start',
+            type:
+              state.status === 'game-over' || state.status === 'won'
+                ? 'restart'
+                : 'start',
           })
         } else {
           dispatch({ type: 'toggle-pause' })
@@ -519,7 +568,7 @@ export function SnakeGame() {
         return
       }
 
-      const direction = KEY_DIRECTIONS[event.key.toLowerCase()]
+      const direction = KEY_DIRECTIONS.get(event.key.toLowerCase())
 
       if (!direction) {
         return
@@ -559,15 +608,17 @@ export function SnakeGame() {
   const modeLocked = canPause
 
   const announcement =
-    state.status === 'game-over'
-      ? `Permainan selesai. Skor ${state.score}. Panjang ${state.length}. Rekor panjang ${state.bestLength}. Mode ${mode.label}.`
-      : state.status === 'paused'
-        ? 'Permainan dijeda.'
-        : state.status === 'countdown'
-          ? `Bersiap. Mode ${mode.label}. Permainan segera dimulai.`
-          : state.status === 'running'
-            ? `Skor ${state.score}.`
-            : 'Siap dimulai.'
+    state.status === 'won'
+      ? `Papan penuh! Kamu menang dengan skor ${state.score} dan panjang maksimal ${state.length} blok pada mode ${mode.label}.`
+      : state.status === 'game-over'
+        ? `Permainan selesai. Skor ${state.score}. Panjang ${state.length}. Rekor panjang ${state.bestLength}. Mode ${mode.label}.`
+        : state.status === 'paused'
+          ? 'Permainan dijeda.'
+          : state.status === 'countdown'
+            ? `Bersiap. Mode ${mode.label}. Permainan segera dimulai.`
+            : state.status === 'running'
+              ? `Skor ${state.score}.`
+              : 'Siap dimulai.'
 
   return (
     <div className="snake-game">
@@ -610,6 +661,9 @@ export function SnakeGame() {
             aria-describedby="snake-instructions"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
+            onTouchCancel={() => {
+              touchStartRef.current = null
+            }}
           >
             <div className="snake-board__grid" aria-hidden="true" />
 
@@ -729,6 +783,36 @@ export function SnakeGame() {
                       >
                         Lanjutkan
                       </button>
+                    </div>
+                  </>
+                ) : null}
+
+                {state.status === 'won' ? (
+                  <>
+                    <p className="snake-overlay__eyebrow">
+                      Papan penuh · {mode.label}
+                    </p>
+                    <h2 className="snake-overlay__title">
+                      Menang! Skor {state.score}.
+                    </h2>
+                    <p className="snake-overlay__text">
+                      Luar biasa! Kamu mengisi seluruh {state.length} blok papan
+                      Snake. Tekan Enter untuk main lagi.
+                    </p>
+                    <div className="snake-overlay__actions">
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => {
+                          unlockAudio()
+                          dispatch({ type: 'restart' })
+                        }}
+                      >
+                        Main lagi
+                      </button>
+                      <Link to="/games" className="button button--quiet">
+                        Menu utama
+                      </Link>
                     </div>
                   </>
                 ) : null}

@@ -8,19 +8,18 @@ import { SearchBar } from '../components/SearchBar'
 import { SectionHeading } from '../components/SectionHeading'
 import { games } from '../data/games'
 import { useGameCatalog } from '../hooks/useGameCatalog'
+import { readStoredBoundedInt } from '../utils/storage'
+
+const MAX_SNAKE_SCORE = 100_000
 
 function readBestScore(): number {
-  if (typeof window === 'undefined') {
-    return 0
-  }
-  try {
-    const normal = window.localStorage.getItem('mino:snake:normal:best')
-    const legacy = window.localStorage.getItem('mino:snake:best')
-    const val = Number.parseInt(normal || legacy || '0', 10)
-    return Number.isFinite(val) && val > 0 ? val : 0
-  } catch {
-    return 0
-  }
+  return (
+    readStoredBoundedInt(
+      'mino:snake:normal:best',
+      MAX_SNAKE_SCORE,
+      'mino:snake:best',
+    ) ?? 0
+  )
 }
 
 export function HomePage() {

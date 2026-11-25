@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   BOARD_SIZE,
   BONUS_FOOD_DURATION_TICKS,
@@ -794,5 +794,103 @@ describe('spawnFood', () => {
     }
 
     expect(spawnFood(snake, () => 0)).toEqual({ x: 0, y: 0 })
+  })
+})
+
+describe('adversarial & kondisi batas Snake', () => {
+  it('BUG-SNK-01: memakan makanan terakhir hingga papan penuh mengubah status menjadi won', () => {
+    const snake: Point[] = []
+    for (let y = 0; y < BOARD_SIZE; y += 1) {
+      for (let x = 0; x < BOARD_SIZE; x += 1) {
+        if (x === BOARD_SIZE - 1 && y === BOARD_SIZE - 1) {
+          continue
+        }
+        snake.push({ x, y })
+      }
+    }
+    const headIdx = snake.findIndex(
+      (p) => p.x === BOARD_SIZE - 2 && p.y === BOARD_SIZE - 1,
+    )
+    const [headPoint] = snake.splice(headIdx, 1)
+    snake.unshift(headPoint)
+
+    const state = stateWith(snake, {
+      food: { x: BOARD_SIZE - 1, y: BOARD_SIZE - 1 },
+      direction: 'right',
+      queuedDirection: 'right',
+      directionQueue: [],
+      status: 'running',
+    })
+
+    const next = step(state)
+    expect(next.length).toBe(BOARD_SIZE * BOARD_SIZE)
+    expect(next.status).toBe('won')
+    expect(next.bonusFood).toBeNull()
+    expect(step(next)).toBe(next)
+    expect(queueDirection(next, 'up')).toBe(next)
+  })
+
+  it('BUG-SNK-02: makanan reguler baru tidak pernah menimpa bonusFood yang masih aktif', () => {
+    const snake: Point[] = []
+    for (let y = 0; y < BOARD_SIZE; y += 1) {
+      for (let x = 0; x < BOARD_SIZE; x += 1) {
+        if (y === 0 && (x === 0 || x === 1 || x === 2)) {
+          continue
+        }
+        snake.push({ x, y })
+      }
+    }
+    const headIdx = snake.findIndex(
+      (p) => p.x === BOARD_SIZE - 1 && p.y === 0,
+    )
+    const [headPoint] = snake.splice(headIdx, 1)
+    snake.unshift(headPoint)
+
+    const bonusPos = { x: 1, y: 0 }
+    const state = stateWith(snake, {
+      food: { x: 0, y: 0 },
+      bonusFood: { ...bonusPos, timer: 10, maxTimer: 30, points: 3 },
+      direction: 'right',
+      queuedDirection: 'right',
+      directionQueue: [],
+      status: 'running',
+    })
+
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0)
+    try {
+      const next = step(state)
+      expect(next.food).toEqual({ x: 2, y: 0 })
+      expect(next.food).not.toEqual(bonusPos)
+    } finally {
+      randomSpy.mockRestore()
+    }
+  })
+
+  it('BUG-SNK-03: queueDirection mengabaikan input arah saat permainan dijeda (dari running maupun countdown)', () => {
+    const runningPaused = pauseGame(
+      stateWith([
+        { x: 5, y: 5 },
+        { x: 4, y: 5 },
+        { x: 3, y: 5 },
+      ]),
+    )
+    expect(queueDirection(runningPaused, 'up')).toBe(runningPaused)
+
+    const countdownPaused = pauseGame(
+      stateWith(
+        [
+          { x: 8, y: 10 },
+          { x: 7, y: 10 },
+          { x: 6, y: 10 },
+        ],
+        { status: 'countdown', countdown: 2 },
+      ),
+    )
+    const afterSpam = queueDirection(
+      queueDirection(countdownPaused, 'up'),
+      'left',
+    )
+    expect(afterSpam).toBe(countdownPaused)
+    expect(afterSpam.directionQueue).toEqual([])
   })
 })

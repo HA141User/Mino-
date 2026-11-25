@@ -51,9 +51,11 @@ import {
   unlockAudio,
   writeStoredMute,
 } from './sound'
+import { readStoredBoundedInt } from '../../utils/storage'
 import './sudoku.css'
 
 const DIFFICULTY_STORAGE_KEY = 'mino:sudoku:difficulty'
+const MAX_SUDOKU_SECONDS = 99 * 3600
 
 function bestTimeKey(difficulty: SudokuDifficulty): string {
   return `mino:sudoku:${difficulty}:best-time`
@@ -72,19 +74,12 @@ function readStoredDifficulty(): SudokuDifficulty {
 }
 
 function readBestTime(difficulty: SudokuDifficulty): number | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-  try {
-    const stored = window.localStorage.getItem(bestTimeKey(difficulty))
-    if (!stored) {
-      return null
-    }
-    const parsed = Number.parseInt(stored, 10)
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null
-  } catch {
-    return null
-  }
+  return readStoredBoundedInt(
+    bestTimeKey(difficulty),
+    MAX_SUDOKU_SECONDS,
+    undefined,
+    0,
+  )
 }
 
 function writeBestTime(difficulty: SudokuDifficulty, seconds: number): void {
@@ -113,27 +108,65 @@ type Action =
   | { type: 'reset-board' }
   | { type: 'new-game'; difficulty?: SudokuDifficulty }
 
+type SoundKind = 'place' | 'conflict' | 'note' | 'erase' | 'hint'
+
 type GameState = SudokuState & {
   bestTime: number | null
   isNewRecord: boolean
+  lastTransition: 'init' | 'reset' | 'new-game' | 'other'
+  soundEvent: { seq: number; kind: SoundKind } | null
 }
 
-function createInitialGameState(difficulty: SudokuDifficulty): GameState {
+function createInitialGameState(
+  difficulty: SudokuDifficulty,
+  transition: 'init' | 'new-game' = 'init',
+): GameState {
   return {
     ...createSudokuState(difficulty),
     bestTime: readBestTime(difficulty),
     isNewRecord: false,
+    lastTransition: transition,
+    soundEvent: null,
   }
+}
+
+function withSound(
+  prev: GameState,
+  kind: SoundKind | null,
+): { seq: number; kind: SoundKind } | null {
+  if (!kind) {
+    return prev.soundEvent
+  }
+  return { seq: (prev.soundEvent?.seq ?? 0) + 1, kind }
 }
 
 function reducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'select':
-      return { ...state, ...selectCell(state, action.index) }
+      return {
+        ...state,
+        ...selectCell(state, action.index),
+        lastTransition: 'other',
+      }
     case 'move':
-      return { ...state, ...moveSelection(state, action.direction) }
+      return {
+        ...state,
+        ...moveSelection(state, action.direction),
+        lastTransition: 'other',
+      }
     case 'input': {
       const next = inputDigit(state, action.digit)
+      if (next === state) {
+        return state
+      }
+      const idx = state.selectedCell
+      let soundKind: SoundKind | null = null
+      if (state.noteMode) {
+        soundKind = 'note'
+      } else if (idx !== null && next.status !== 'won') {
+        soundKind = getConflicts(next.values).has(idx) ? 'conflict' : 'place'
+      }
+
       if (next.status === 'won' && state.status !== 'won') {
         const beatRecord =
           state.bestTime === null || next.elapsedSeconds < state.bestTime
@@ -142,39 +175,85 @@ function reducer(state: GameState, action: Action): GameState {
           ...next,
           bestTime: nextBest,
           isNewRecord: beatRecord,
+          lastTransition: 'other',
+          soundEvent: state.soundEvent,
         }
       }
       return {
         ...next,
         bestTime: state.bestTime,
         isNewRecord: state.isNewRecord,
+        lastTransition: 'other',
+        soundEvent: withSound(state, soundKind),
       }
     }
-    case 'erase':
-      return { ...state, ...eraseCell(state) }
-    case 'undo':
-      return { ...state, ...undoMove(state) }
-    case 'toggle-note':
-      return { ...state, ...toggleNoteMode(state) }
-    case 'hint':
-      return { ...state, ...requestHint(state) }
+    case 'erase': {
+      const next = eraseCell(state)
+      if (next === state) {
+        return state
+      }
+      return {
+        ...state,
+        ...next,
+        lastTransition: 'other',
+        soundEvent: withSound(state, 'erase'),
+      }
+    }
+    case 'undo': {
+      const next = undoMove(state)
+      if (next === state) {
+        return state
+      }
+      return {
+        ...state,
+        ...next,
+        lastTransition: 'other',
+        soundEvent: withSound(state, 'erase'),
+      }
+    }
+    case 'toggle-note': {
+      const next = toggleNoteMode(state)
+      if (next === state) {
+        return state
+      }
+      return {
+        ...state,
+        ...next,
+        lastTransition: 'other',
+        soundEvent: withSound(state, 'note'),
+      }
+    }
+    case 'hint': {
+      const next = requestHint(state)
+      if (next === state) {
+        return state
+      }
+      return {
+        ...state,
+        ...next,
+        lastTransition: 'other',
+        soundEvent: withSound(state, 'hint'),
+      }
+    }
     case 'clear-hint':
-      return { ...state, ...clearHint(state) }
+      return { ...state, ...clearHint(state), lastTransition: 'other' }
     case 'toggle-pause':
-      return { ...state, ...togglePause(state) }
+      return { ...state, ...togglePause(state), lastTransition: 'other' }
     case 'pause':
-      return { ...state, ...pauseGame(state) }
+      return { ...state, ...pauseGame(state), lastTransition: 'other' }
     case 'tick':
-      return { ...state, ...tickTimer(state) }
+      return { ...state, ...tickTimer(state), lastTransition: 'other' }
     case 'reset-board':
       return {
         ...resetCurrentBoard(state),
         bestTime: state.bestTime,
         isNewRecord: false,
+        lastTransition: 'reset',
+        soundEvent: state.soundEvent,
       }
     case 'new-game': {
       const targetDifficulty = action.difficulty ?? state.difficulty
-      return createInitialGameState(targetDifficulty)
+      return createInitialGameState(targetDifficulty, 'new-game')
     }
     default:
       return state
@@ -193,10 +272,45 @@ export function SudokuGame() {
   const [announcement, setAnnouncement] = useState('')
   const mutedRef = useRef(muted)
   const prevStatusRef = useRef(state.status)
+  const elapsedSecondsRef = useRef(state.elapsedSeconds)
+  const lastPlayedSeqRef = useRef(0)
 
   useEffect(() => {
     mutedRef.current = muted
   }, [muted])
+
+  useEffect(() => {
+    elapsedSecondsRef.current = state.elapsedSeconds
+  }, [state.elapsedSeconds])
+
+  // Putar efek suara aksi secara sinkron dengan hasil reducer (bebas stale closure)
+  useEffect(() => {
+    const ev = state.soundEvent
+    if (!ev || ev.seq === lastPlayedSeqRef.current) {
+      return
+    }
+    lastPlayedSeqRef.current = ev.seq
+    if (mutedRef.current) {
+      return
+    }
+    switch (ev.kind) {
+      case 'place':
+        playPlaceDigitSound()
+        break
+      case 'conflict':
+        playConflictSound()
+        break
+      case 'note':
+        playNoteToggleSound()
+        break
+      case 'erase':
+        playEraseSound()
+        break
+      case 'hint':
+        playHintSound()
+        break
+    }
+  }, [state.soundEvent])
 
   // Simpan pilihan kesulitan
   useEffect(() => {
@@ -214,7 +328,7 @@ export function SudokuGame() {
     }
   }, [state.status, state.isNewRecord, state.bestTime, state.difficulty])
 
-  // Efek suara & pengumuman status saat menang atau jeda
+  // Efek suara & pengumuman status saat menang atau jeda (hanya saat status berubah)
   useEffect(() => {
     const prev = prevStatusRef.current
     prevStatusRef.current = state.status
@@ -224,14 +338,19 @@ export function SudokuGame() {
         playWinSound()
       }
       setAnnouncement(
-        `Selamat! Papan Sudoku ${getDifficultyMeta(state.difficulty).label} selesai dalam ${formatTime(state.elapsedSeconds)}.`,
+        `Selamat! Papan Sudoku ${getDifficultyMeta(state.difficulty).label} selesai dalam ${formatTime(elapsedSecondsRef.current)}.`,
       )
     } else if (prev === 'playing' && state.status === 'paused') {
       setAnnouncement('Permainan dijeda.')
-    } else if (prev === 'paused' && state.status === 'playing') {
+    } else if (
+      prev === 'paused' &&
+      state.status === 'playing' &&
+      state.lastTransition !== 'reset' &&
+      state.lastTransition !== 'new-game'
+    ) {
       setAnnouncement('Permainan dilanjutkan.')
     }
-  }, [state.status, state.difficulty, state.elapsedSeconds])
+  }, [state.status, state.difficulty, state.lastTransition])
 
   // Timer 1 detik saat bermain
   useEffect(() => {
@@ -244,16 +363,22 @@ export function SudokuGame() {
     return () => window.clearInterval(interval)
   }, [state.status])
 
-  // Auto-pause saat tab browser disembunyikan
+  // Auto-pause saat tab browser disembunyikan atau jendela kehilangan fokus
   useEffect(() => {
     const handleVisibility = () => {
       if (document.hidden) {
         dispatch({ type: 'pause' })
       }
     }
+    const handleBlur = () => {
+      dispatch({ type: 'pause' })
+    }
     document.addEventListener('visibilitychange', handleVisibility)
-    return () =>
+    window.addEventListener('blur', handleBlur)
+    return () => {
       document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('blur', handleBlur)
+    }
   }, [])
 
   const conflicts = useMemo(() => getConflicts(state.values), [state.values])
@@ -273,96 +398,30 @@ export function SudokuGame() {
     [state.activeHint],
   )
 
-  const handleDigitInput = useCallback(
-    (digit: number) => {
-      unlockAudio()
-      if (state.status !== 'playing' || state.selectedCell === null) {
-        return
-      }
-      const idx = state.selectedCell
-      if (state.puzzle[idx] !== 0) {
-        return
-      }
-
-      if (state.noteMode) {
-        if (state.values[idx] === 0 && !mutedRef.current) {
-          playNoteToggleSound()
-        }
-        dispatch({ type: 'input', digit })
-        return
-      }
-
-      if (state.values[idx] === digit) {
-        return
-      }
-
-      const previewValues = [...state.values]
-      previewValues[idx] = digit
-      const nextConflicts = getConflicts(previewValues)
-      const hasConflict = nextConflicts.has(idx)
-
-      if (!mutedRef.current) {
-        if (hasConflict) {
-          playConflictSound()
-        } else {
-          playPlaceDigitSound()
-        }
-      }
-
-      dispatch({ type: 'input', digit })
-    },
-    [state.status, state.selectedCell, state.puzzle, state.noteMode, state.values],
-  )
+  const handleDigitInput = useCallback((digit: number) => {
+    unlockAudio()
+    dispatch({ type: 'input', digit })
+  }, [])
 
   const handleErase = useCallback(() => {
     unlockAudio()
-    if (state.status !== 'playing' || state.selectedCell === null) {
-      return
-    }
-    const idx = state.selectedCell
-    if (
-      state.puzzle[idx] === 0 &&
-      (state.values[idx] !== 0 || state.notes[idx].length > 0)
-    ) {
-      if (!mutedRef.current) {
-        playEraseSound()
-      }
-      dispatch({ type: 'erase' })
-    }
-  }, [state.status, state.selectedCell, state.puzzle, state.values, state.notes])
+    dispatch({ type: 'erase' })
+  }, [])
 
   const handleUndo = useCallback(() => {
     unlockAudio()
-    if (state.status !== 'playing' || state.history.length === 0) {
-      return
-    }
-    if (!mutedRef.current) {
-      playEraseSound()
-    }
     dispatch({ type: 'undo' })
-  }, [state.status, state.history.length])
+  }, [])
 
   const handleHint = useCallback(() => {
     unlockAudio()
-    if (state.status !== 'playing') {
-      return
-    }
-    if (!mutedRef.current) {
-      playHintSound()
-    }
     dispatch({ type: 'hint' })
-  }, [state.status])
+  }, [])
 
   const handleToggleNote = useCallback(() => {
     unlockAudio()
-    if (state.status !== 'playing') {
-      return
-    }
-    if (!mutedRef.current) {
-      playNoteToggleSound()
-    }
     dispatch({ type: 'toggle-note' })
-  }, [state.status])
+  }, [])
 
   const handleToggleMute = useCallback(() => {
     unlockAudio()
@@ -376,16 +435,20 @@ export function SudokuGame() {
   // Kontrol keyboard global
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null
+      if (event.defaultPrevented) {
+        return
+      }
+
       if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT' ||
-          target.isContentEditable)
+        event.target instanceof HTMLElement &&
+        event.target.closest(
+          'input, textarea, select, [contenteditable="true"]',
+        )
       ) {
         return
       }
+
+      const target = event.target as HTMLElement | null
 
       // Ctrl+Z / Cmd+Z untuk Undo
       if (
@@ -427,18 +490,27 @@ export function SudokuGame() {
       }
 
       if (key >= '1' && key <= '9') {
+        if (event.repeat) {
+          return
+        }
         event.preventDefault()
         handleDigitInput(Number.parseInt(key, 10))
         return
       }
 
       if (key === 'Backspace' || key === 'Delete' || key === '0') {
+        if (event.repeat) {
+          return
+        }
         event.preventDefault()
         handleErase()
         return
       }
 
       if (lower === 'n') {
+        if (event.repeat) {
+          return
+        }
         event.preventDefault()
         handleToggleNote()
         return
@@ -451,12 +523,18 @@ export function SudokuGame() {
       }
 
       if (lower === 'h') {
+        if (event.repeat) {
+          return
+        }
         event.preventDefault()
         handleHint()
         return
       }
 
       if (key === ' ' || lower === 'p') {
+        if (event.repeat) {
+          return
+        }
         // Jangan bajak Spasi saat fokus sedang berada di tombol atau tautan
         if (
           key === ' ' &&
